@@ -11,8 +11,25 @@ declare(strict_types=1);
 define('BASE_PATH', dirname(__DIR__));
 define('PUBLIC_PATH', __DIR__);
 
+// Early error display for bootstrap issues
+error_reporting(E_ALL);
+ini_set('display_errors', '1');
+
+// Check for vendor autoload
+if (!file_exists(BASE_PATH . '/vendor/autoload.php')) {
+    die('Error: Composer dependencies not installed. Please run: composer install');
+}
+
 // Composer autoloader
 require BASE_PATH . '/vendor/autoload.php';
+
+// Initialize logger early
+use Ephishchk\Core\Logger;
+
+$logPath = BASE_PATH . '/storage/logs';
+if (!is_dir($logPath)) {
+    mkdir($logPath, 0755, true);
+}
 
 // Load environment variables
 $dotenv = Dotenv\Dotenv::createImmutable(BASE_PATH);
@@ -21,32 +38,44 @@ $dotenv->safeLoad();
 // Load configuration
 $config = require BASE_PATH . '/config/app.php';
 
+// Initialize logger with debug mode
+$logger = Logger::getInstance($config['paths']['logs'] ?? $logPath, $config['debug'] ?? true);
+
+$logger->info('Request started', [
+    'method' => $_SERVER['REQUEST_METHOD'] ?? 'unknown',
+    'uri' => $_SERVER['REQUEST_URI'] ?? 'unknown',
+    'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown',
+]);
+
 // Error handling based on environment
 if ($config['debug']) {
     error_reporting(E_ALL);
     ini_set('display_errors', '1');
 } else {
-    error_reporting(0);
+    error_reporting(E_ALL);
     ini_set('display_errors', '0');
+    ini_set('log_errors', '1');
 }
 
 // Set timezone
-date_default_timezone_set($config['timezone']);
+date_default_timezone_set($config['timezone'] ?? 'UTC');
 
 // Start session with secure settings
-session_start([
-    'cookie_httponly' => true,
-    'cookie_secure' => $config['secure_cookies'],
-    'cookie_samesite' => 'Strict',
-    'use_strict_mode' => true,
-]);
+if (session_status() === PHP_SESSION_NONE) {
+    session_start([
+        'cookie_httponly' => true,
+        'cookie_secure' => $config['secure_cookies'] ?? false,
+        'cookie_samesite' => 'Strict',
+        'use_strict_mode' => true,
+    ]);
+}
 
 // Security headers
 header('X-Content-Type-Options: nosniff');
 header('X-Frame-Options: DENY');
 header('X-XSS-Protection: 1; mode=block');
 header('Referrer-Policy: strict-origin-when-cross-origin');
-if ($config['secure_cookies']) {
+if ($config['secure_cookies'] ?? false) {
     header('Strict-Transport-Security: max-age=31536000; includeSubDomains');
 }
 
@@ -62,25 +91,51 @@ try {
     $request = Request::createFromGlobals();
     $response = $app->handle($request);
     $response->send();
-} catch (Throwable $e) {
-    if ($config['debug']) {
-        echo '<pre>';
-        echo 'Error: ' . htmlspecialchars($e->getMessage()) . "\n";
-        echo 'File: ' . htmlspecialchars($e->getFile()) . ':' . $e->getLine() . "\n";
-        echo 'Trace: ' . htmlspecialchars($e->getTraceAsString());
-        echo '</pre>';
-    } else {
-        http_response_code(500);
-        echo 'An error occurred. Please try again later.';
-    }
 
-    // Log error
-    error_log(sprintf(
-        "[%s] %s in %s:%d\n%s",
+    $logger->info('Request completed', [
+        'status' => $response->getStatusCode(),
+    ]);
+
+} catch (Throwable $e) {
+    // Always log the error
+    $logger->exception($e, 'Uncaught exception in application');
+
+    // Write to a dedicated error log file as well
+    $errorLogFile = ($config['paths']['logs'] ?? $logPath) . '/error_' . date('Y-m-d') . '.log';
+    $errorMessage = sprintf(
+        "[%s] %s\nFile: %s:%d\nTrace:\n%s\n\n",
         date('Y-m-d H:i:s'),
         $e->getMessage(),
         $e->getFile(),
         $e->getLine(),
         $e->getTraceAsString()
-    ));
+    );
+    file_put_contents($errorLogFile, $errorMessage, FILE_APPEND | LOCK_EX);
+
+    http_response_code(500);
+
+    // Always show detailed errors for now to help debugging
+    // In production, set APP_DEBUG=false in .env to hide details
+    if ($config['debug'] ?? true) {
+        echo '<!DOCTYPE html><html><head><title>Error</title>';
+        echo '<style>body{font-family:sans-serif;padding:20px;background:#f8f9fa;}';
+        echo '.error{background:#fff;border:1px solid #e74c3c;border-radius:8px;padding:20px;max-width:900px;margin:0 auto;}';
+        echo 'h1{color:#e74c3c;margin-top:0;}pre{background:#2d2d2d;color:#f8f8f2;padding:15px;border-radius:4px;overflow-x:auto;font-size:13px;}';
+        echo '.info{background:#fff3cd;border:1px solid #ffc107;padding:10px;border-radius:4px;margin-top:15px;}</style></head><body>';
+        echo '<div class="error">';
+        echo '<h1>Application Error</h1>';
+        echo '<p><strong>Message:</strong> ' . htmlspecialchars($e->getMessage()) . '</p>';
+        echo '<p><strong>File:</strong> ' . htmlspecialchars($e->getFile()) . ':' . $e->getLine() . '</p>';
+        echo '<h3>Stack Trace:</h3>';
+        echo '<pre>' . htmlspecialchars($e->getTraceAsString()) . '</pre>';
+        echo '<div class="info"><strong>Log file:</strong> ' . htmlspecialchars($errorLogFile) . '</div>';
+        echo '</div></body></html>';
+    } else {
+        echo '<!DOCTYPE html><html><head><title>Error</title>';
+        echo '<style>body{font-family:sans-serif;padding:40px;text-align:center;}</style></head><body>';
+        echo '<h1>An error occurred</h1>';
+        echo '<p>Please try again later. The error has been logged.</p>';
+        echo '<p><a href="/">Return to home</a></p>';
+        echo '</body></html>';
+    }
 }
