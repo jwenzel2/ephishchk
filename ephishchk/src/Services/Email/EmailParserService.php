@@ -197,7 +197,15 @@ class ParsedEmail
         }
 
         try {
-            return $header->getDateTime();
+            $dateTime = $header->getDateTime();
+            if ($dateTime === null) {
+                return null;
+            }
+            // Convert DateTime to DateTimeImmutable if needed
+            if ($dateTime instanceof \DateTimeImmutable) {
+                return $dateTime;
+            }
+            return \DateTimeImmutable::createFromMutable($dateTime);
         } catch (\Exception) {
             return null;
         }
