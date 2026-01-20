@@ -59,13 +59,13 @@ class DkimCheckerService
 
         if (empty($foundSelectors)) {
             return [
-                'status' => 'warning',
+                'status' => 'fail',
                 'selectors' => [],
                 'details' => [
                     'message' => 'No DKIM records found for common selectors',
                     'checked_selectors' => $checkedSelectors,
                     'note' => 'DKIM selectors are domain-specific. The actual selector may not be in our list.',
-                    'recommendation' => 'Check email headers for the exact DKIM selector used',
+                    'recommendation' => 'Configure DKIM signing to authenticate outgoing emails',
                 ],
             ];
         }

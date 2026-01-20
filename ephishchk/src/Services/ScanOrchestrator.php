@@ -784,17 +784,45 @@ class ScanOrchestrator
 
             // SPF or DKIM failure = automatic high risk
             if (in_array($checkType, ['spf', 'dkim']) && $status === 'fail') {
-                $criticalFailures[] = strtoupper($checkType);
+                $criticalFailures[] = strtoupper($checkType) . ' (no record)';
             }
 
             // DMARC failure = automatic high risk
             if ($checkType === 'dmarc' && $status === 'fail') {
-                $criticalFailures[] = 'DMARC';
+                $criticalFailures[] = 'DMARC (no record)';
             }
 
             // VirusTotal malicious detection = automatic high risk
             if (in_array($checkType, ['virustotal_url', 'virustotal_file']) && $status === 'fail') {
                 $criticalFailures[] = 'VirusTotal';
+            }
+
+            // Check header analysis for authentication failures from email's Authentication-Results
+            if ($checkType === 'header' && !empty($result['details']['findings'])) {
+                foreach ($result['details']['findings'] as $finding) {
+                    $findingType = $finding['type'] ?? '';
+                    $severity = $finding['severity'] ?? '';
+
+                    // SPF failure in Authentication-Results
+                    if ($findingType === 'spf_failure' && $severity === 'high') {
+                        $criticalFailures[] = 'SPF (auth failed)';
+                    }
+
+                    // DKIM failure in Authentication-Results
+                    if ($findingType === 'dkim_failure' && $severity === 'high') {
+                        $criticalFailures[] = 'DKIM (auth failed)';
+                    }
+
+                    // DMARC failure in Authentication-Results
+                    if ($findingType === 'dmarc_failure' && $severity === 'high') {
+                        $criticalFailures[] = 'DMARC (auth failed)';
+                    }
+
+                    // Display name spoofing = high risk
+                    if ($findingType === 'display_name_spoofing') {
+                        $criticalFailures[] = 'Display name spoofing';
+                    }
+                }
             }
         }
 
@@ -802,7 +830,7 @@ class ScanOrchestrator
         if (!empty($criticalFailures)) {
             $this->logger->info('Critical authentication failures detected', [
                 'scan_id' => $scanId,
-                'failures' => $criticalFailures,
+                'failures' => array_unique($criticalFailures),
             ]);
 
             // Calculate base score but ensure minimum of 65 for critical failures
