@@ -8,6 +8,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Form enhancements
     initForms();
+
+    // File upload functionality
+    initFileUpload();
 });
 
 /**
@@ -166,3 +169,104 @@ style.textContent = `
     }
 `;
 document.head.appendChild(style);
+
+/**
+ * Toggle between paste and upload input methods
+ */
+function toggleInputMethod(method) {
+    const pasteInput = document.getElementById('paste-input');
+    const uploadInput = document.getElementById('upload-input');
+    const emailContent = document.getElementById('email-content');
+    const emlFile = document.getElementById('eml-file');
+
+    if (method === 'upload') {
+        pasteInput.style.display = 'none';
+        uploadInput.style.display = 'block';
+        if (emailContent) emailContent.removeAttribute('required');
+    } else {
+        pasteInput.style.display = 'block';
+        uploadInput.style.display = 'none';
+        if (emlFile) emlFile.value = '';
+        clearFile();
+    }
+}
+
+/**
+ * Clear the selected file
+ */
+function clearFile() {
+    const emlFile = document.getElementById('eml-file');
+    const fileSelected = document.getElementById('file-selected');
+    const uploadText = document.querySelector('.file-upload-text');
+
+    if (emlFile) emlFile.value = '';
+    if (fileSelected) fileSelected.style.display = 'none';
+    if (uploadText) uploadText.style.display = 'block';
+}
+
+/**
+ * Initialize file upload functionality
+ */
+function initFileUpload() {
+    const dropZone = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('eml-file');
+    const fileSelected = document.getElementById('file-selected');
+    const fileName = document.getElementById('file-name');
+    const uploadText = document.querySelector('.file-upload-text');
+
+    if (!dropZone || !fileInput) return;
+
+    // Handle file selection
+    fileInput.addEventListener('change', function() {
+        handleFileSelect(this.files[0]);
+    });
+
+    // Drag and drop handling
+    dropZone.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.classList.add('drag-over');
+    });
+
+    dropZone.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.classList.remove('drag-over');
+    });
+
+    dropZone.addEventListener('drop', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.classList.remove('drag-over');
+
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            fileInput.files = files;
+            handleFileSelect(files[0]);
+        }
+    });
+
+    function handleFileSelect(file) {
+        if (!file) return;
+
+        // Validate file extension
+        const ext = file.name.split('.').pop().toLowerCase();
+        if (!['eml', 'msg'].includes(ext)) {
+            showNotification('Please select a valid .eml or .msg file', 'error');
+            fileInput.value = '';
+            return;
+        }
+
+        // Validate file size (10MB)
+        if (file.size > 10 * 1024 * 1024) {
+            showNotification('File size exceeds 10MB limit', 'error');
+            fileInput.value = '';
+            return;
+        }
+
+        // Show selected file
+        if (fileName) fileName.textContent = file.name + ' (' + formatFileSize(file.size) + ')';
+        if (fileSelected) fileSelected.style.display = 'flex';
+        if (uploadText) uploadText.style.display = 'none';
+    }
+}

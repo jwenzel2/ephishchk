@@ -35,16 +35,45 @@ $activeTab = $activeTab ?? 'quick';
     <div class="tab-content <?= $activeTab === 'full' ? 'active' : '' ?>" id="tab-full">
         <div class="card">
             <h2>Full Email Analysis</h2>
-            <p>Paste the complete raw email source (including headers) for comprehensive analysis.</p>
+            <p>Upload an .eml file or paste the complete raw email source (including headers) for comprehensive analysis.</p>
 
-            <form method="POST" action="/scan/full" class="scan-form">
+            <form method="POST" action="/scan/full" class="scan-form" enctype="multipart/form-data">
                 <?= $csrfField ?>
-                <div class="form-group">
+
+                <div class="input-method-toggle">
+                    <label class="toggle-option">
+                        <input type="radio" name="input_method" value="paste" checked onchange="toggleInputMethod(this.value)">
+                        <span>Paste Email Content</span>
+                    </label>
+                    <label class="toggle-option">
+                        <input type="radio" name="input_method" value="upload" onchange="toggleInputMethod(this.value)">
+                        <span>Upload .eml File</span>
+                    </label>
+                </div>
+
+                <div class="form-group" id="paste-input">
                     <label for="email-content">Raw Email Content</label>
                     <textarea id="email-content" name="email_content" rows="15"
-                              placeholder="Paste the raw email source here...&#10;&#10;To get raw email:&#10;- Gmail: Open email → Menu (⋮) → Show original&#10;- Outlook: Open email → File → Properties → Internet headers"
-                              required></textarea>
+                              placeholder="Paste the raw email source here...&#10;&#10;To get raw email:&#10;- Gmail: Open email → Menu (⋮) → Show original&#10;- Outlook: Open email → File → Properties → Internet headers"></textarea>
                 </div>
+
+                <div class="form-group" id="upload-input" style="display: none;">
+                    <label for="eml-file">Upload .eml File</label>
+                    <div class="file-upload-area" id="drop-zone">
+                        <input type="file" id="eml-file" name="eml_file" accept=".eml,.msg,message/rfc822">
+                        <div class="file-upload-text">
+                            <span class="upload-icon">📧</span>
+                            <p>Drag & drop your .eml file here or click to browse</p>
+                            <p class="file-hint">Supports .eml files up to 10MB</p>
+                        </div>
+                        <div class="file-selected" id="file-selected" style="display: none;">
+                            <span class="file-icon">📄</span>
+                            <span class="file-name" id="file-name"></span>
+                            <button type="button" class="file-remove" onclick="clearFile()">×</button>
+                        </div>
+                    </div>
+                </div>
+
                 <button type="submit" class="btn btn-primary">Analyze Email</button>
             </form>
         </div>

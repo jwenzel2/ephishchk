@@ -69,6 +69,160 @@ if (($scan['risk_score'] ?? 0) >= 50) {
         <?php endif; ?>
     </div>
 
+    <?php
+    // Extract headers from header analysis result
+    $extractedHeaders = $resultsByType['header']['details']['extracted_headers'] ?? [];
+    if (!empty($extractedHeaders) && $scan['scan_type'] === 'full'):
+    ?>
+    <div class="email-headers-section card">
+        <h2>Email Headers</h2>
+        <p class="section-desc">Key headers extracted from the email for phishing detection</p>
+
+        <div class="headers-grid">
+            <?php
+            // Define which headers to show prominently and their warning conditions
+            $headerDisplay = [
+                'from' => ['icon' => '👤', 'warn_if_differs_from' => null],
+                'reply_to' => ['icon' => '↩️', 'warn_if_differs_from' => 'from'],
+                'return_path' => ['icon' => '📮', 'warn_if_differs_from' => 'from'],
+                'to' => ['icon' => '📧', 'warn_if_differs_from' => null],
+                'subject' => ['icon' => '📝', 'warn_if_differs_from' => null],
+                'date' => ['icon' => '📅', 'warn_if_differs_from' => null],
+            ];
+
+            foreach ($headerDisplay as $headerKey => $headerConfig):
+                if (!isset($extractedHeaders[$headerKey])) continue;
+                $header = $extractedHeaders[$headerKey];
+
+                // Check if this header differs from 'from' (potential spoofing indicator)
+                $isDifferent = false;
+                $fromEmail = strtolower($extractedHeaders['from']['value'] ?? '');
+                if ($headerConfig['warn_if_differs_from'] === 'from' && $fromEmail) {
+                    $thisEmail = strtolower($header['value'] ?? '');
+                    // Extract domains for comparison
+                    $fromDomain = explode('@', $fromEmail)[1] ?? '';
+                    $thisDomain = explode('@', $thisEmail)[1] ?? '';
+                    if ($thisDomain && $fromDomain && $thisDomain !== $fromDomain) {
+                        $isDifferent = true;
+                    }
+                }
+            ?>
+            <div class="header-item <?= $isDifferent ? 'header-warning' : '' ?>">
+                <div class="header-icon"><?= $headerConfig['icon'] ?></div>
+                <div class="header-content">
+                    <span class="header-label"><?= $e($header['label']) ?></span>
+                    <span class="header-value"><?= $e($header['full']) ?></span>
+                    <?php if ($isDifferent): ?>
+                        <span class="header-alert">Domain differs from sender</span>
+                    <?php endif; ?>
+                </div>
+            </div>
+            <?php endforeach; ?>
+        </div>
+
+        <?php
+        // Additional headers (collapsible)
+        $additionalHeaders = ['message_id', 'x_mailer', 'x_originating_ip', 'authentication_results', 'cc'];
+        $hasAdditional = false;
+        foreach ($additionalHeaders as $key) {
+            if (isset($extractedHeaders[$key])) {
+                $hasAdditional = true;
+                break;
+            }
+        }
+        if ($hasAdditional):
+        ?>
+        <details class="additional-headers">
+            <summary>Additional Headers</summary>
+            <div class="headers-list">
+                <?php foreach ($additionalHeaders as $headerKey):
+                    if (!isset($extractedHeaders[$headerKey])) continue;
+                    $header = $extractedHeaders[$headerKey];
+                ?>
+                <div class="header-row">
+                    <span class="header-label"><?= $e($header['label']) ?>:</span>
+                    <span class="header-value"><?= $e($header['value']) ?></span>
+                </div>
+                <?php endforeach; ?>
+            </div>
+        </details>
+        <?php endif; ?>
+
+        <?php if (!empty($extractedHeaders['received']['hops'])): ?>
+        <details class="received-headers">
+            <summary>Mail Routing Path (<?= count($extractedHeaders['received']['hops']) ?> hops)</summary>
+            <div class="routing-path">
+                <?php foreach ($extractedHeaders['received']['hops'] as $i => $hop): ?>
+                <div class="hop">
+                    <span class="hop-number"><?= $i + 1 ?></span>
+                    <code class="hop-content"><?= $e($hop) ?></code>
+                </div>
+                <?php endforeach; ?>
+            </div>
+        </details>
+        <?php endif; ?>
+    </div>
+    <?php endif; ?>
+
+    <?php
+    // Extract all URLs for display
+    $allUrls = $resultsByType['links']['details']['links'] ?? [];
+    if (!empty($allUrls) && $scan['scan_type'] === 'full'):
+    ?>
+    <div class="urls-section card">
+        <h2>All URLs Found (<?= count($allUrls) ?>)</h2>
+        <p class="section-desc">Complete list of URLs extracted from the email body</p>
+
+        <div class="urls-table-container">
+            <table class="urls-table">
+                <thead>
+                    <tr>
+                        <th>URL</th>
+                        <th>Domain</th>
+                        <th>Risk</th>
+                        <th>Flags</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($allUrls as $link):
+                        $riskClass = match($link['risk_level'] ?? 'low') {
+                            'high' => 'error',
+                            'medium' => 'warning',
+                            default => 'success'
+                        };
+                        $flags = [];
+                        if (!empty($link['is_shortener'])) $flags[] = 'URL Shortener';
+                        if (!empty($link['is_typosquat'])) $flags[] = 'Typosquat';
+                        if (!empty($link['is_suspicious_tld'])) $flags[] = 'Suspicious TLD';
+                        if (!empty($link['has_ip'])) $flags[] = 'IP Address';
+                        if (!empty($link['is_data_uri'])) $flags[] = 'Data URI';
+                        if (!empty($link['has_encoded_chars'])) $flags[] = 'Encoded Characters';
+                    ?>
+                    <tr class="url-row risk-<?= $link['risk_level'] ?? 'low' ?>">
+                        <td class="url-cell">
+                            <code class="url-text"><?= $e($link['url']) ?></code>
+                        </td>
+                        <td class="domain-cell"><?= $e($link['domain'] ?? parse_url($link['url'], PHP_URL_HOST) ?? '-') ?></td>
+                        <td class="risk-cell">
+                            <span class="badge badge-<?= $riskClass ?>"><?= ucfirst($link['risk_level'] ?? 'low') ?></span>
+                        </td>
+                        <td class="flags-cell">
+                            <?php if (!empty($flags)): ?>
+                                <?php foreach ($flags as $flag): ?>
+                                    <span class="flag-badge"><?= $e($flag) ?></span>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <span class="no-flags">-</span>
+                            <?php endif; ?>
+                        </td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <?php endif; ?>
+
     <div class="results-grid">
         <?php
         $checkTypes = [

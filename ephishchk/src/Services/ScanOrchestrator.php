@@ -334,6 +334,10 @@ class ScanOrchestrator
                 $status = 'warning';
             }
 
+            // Extract key headers for display
+            $extractedHeaders = $this->extractKeyHeaders($email);
+            $result['extracted_headers'] = $extractedHeaders;
+
             $this->resultModel->create([
                 'scan_id' => $scanId,
                 'check_type' => 'header',
@@ -349,6 +353,147 @@ class ScanOrchestrator
             $this->logger->exception($e, 'Header analysis failed', ['scan_id' => $scanId]);
             throw $e;
         }
+    }
+
+    /**
+     * Extract key email headers for display
+     */
+    private function extractKeyHeaders($email): array
+    {
+        $headers = [];
+
+        // From
+        $from = $email->getFrom();
+        if ($from) {
+            $headers['from'] = [
+                'label' => 'From',
+                'value' => $from['email'] ?? '',
+                'display_name' => $from['name'] ?? '',
+                'full' => $from['name'] ? "{$from['name']} <{$from['email']}>" : $from['email'],
+            ];
+        }
+
+        // Reply-To
+        $replyTo = $email->getReplyTo();
+        if ($replyTo) {
+            $headers['reply_to'] = [
+                'label' => 'Reply-To',
+                'value' => $replyTo['email'] ?? '',
+                'display_name' => $replyTo['name'] ?? '',
+                'full' => $replyTo['name'] ? "{$replyTo['name']} <{$replyTo['email']}>" : $replyTo['email'],
+            ];
+        }
+
+        // Return-Path
+        $returnPath = $email->getReturnPath();
+        if ($returnPath) {
+            $headers['return_path'] = [
+                'label' => 'Return-Path',
+                'value' => $returnPath,
+                'full' => $returnPath,
+            ];
+        }
+
+        // To
+        $to = $email->getTo();
+        if (!empty($to)) {
+            $toAddresses = array_map(function ($addr) {
+                return $addr['name'] ? "{$addr['name']} <{$addr['email']}>" : $addr['email'];
+            }, $to);
+            $headers['to'] = [
+                'label' => 'To',
+                'value' => implode(', ', array_column($to, 'email')),
+                'addresses' => $to,
+                'full' => implode(', ', $toAddresses),
+            ];
+        }
+
+        // CC
+        $cc = $email->getCc();
+        if (!empty($cc)) {
+            $ccAddresses = array_map(function ($addr) {
+                return $addr['name'] ? "{$addr['name']} <{$addr['email']}>" : $addr['email'];
+            }, $cc);
+            $headers['cc'] = [
+                'label' => 'CC',
+                'value' => implode(', ', array_column($cc, 'email')),
+                'addresses' => $cc,
+                'full' => implode(', ', $ccAddresses),
+            ];
+        }
+
+        // Subject
+        $subject = $email->getSubject();
+        if ($subject) {
+            $headers['subject'] = [
+                'label' => 'Subject',
+                'value' => $subject,
+                'full' => $subject,
+            ];
+        }
+
+        // Date
+        $date = $email->getDate();
+        if ($date) {
+            $headers['date'] = [
+                'label' => 'Date',
+                'value' => $date->format('Y-m-d H:i:s T'),
+                'full' => $date->format('r'),
+            ];
+        }
+
+        // Message-ID
+        $messageId = $email->getMessageId();
+        if ($messageId) {
+            $headers['message_id'] = [
+                'label' => 'Message-ID',
+                'value' => $messageId,
+                'full' => $messageId,
+            ];
+        }
+
+        // X-Mailer
+        $mailer = $email->getMailer();
+        if ($mailer) {
+            $headers['x_mailer'] = [
+                'label' => 'X-Mailer',
+                'value' => $mailer,
+                'full' => $mailer,
+            ];
+        }
+
+        // X-Originating-IP
+        $originatingIp = $email->getOriginatingIp();
+        if ($originatingIp) {
+            $headers['x_originating_ip'] = [
+                'label' => 'X-Originating-IP',
+                'value' => $originatingIp,
+                'full' => $originatingIp,
+            ];
+        }
+
+        // Authentication-Results
+        $authResults = $email->getAuthenticationResults();
+        if ($authResults) {
+            $headers['authentication_results'] = [
+                'label' => 'Authentication-Results',
+                'value' => $authResults,
+                'full' => $authResults,
+            ];
+        }
+
+        // Received headers (routing path)
+        $received = $email->getReceivedHeaders();
+        if (!empty($received)) {
+            $headers['received'] = [
+                'label' => 'Received',
+                'value' => count($received) . ' hop(s)',
+                'hops' => $received,
+                'full' => implode("\n", $received),
+            ];
+        }
+
+        return $headers;
     }
 
     /**

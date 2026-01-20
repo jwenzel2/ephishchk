@@ -66,15 +66,38 @@ class ScanController extends BaseController
      */
     public function fullAnalysis(): Response
     {
-        $rawEmail = InputSanitizer::rawEmail($this->getPost('email_content', ''));
+        $rawEmail = '';
+        $inputMethod = $this->getPost('input_method', 'paste');
+
+        // Check for file upload first
+        if ($inputMethod === 'upload' && isset($_FILES['eml_file']) && $_FILES['eml_file']['error'] === UPLOAD_ERR_OK) {
+            $rawEmail = $this->handleEmlUpload($_FILES['eml_file']);
+            if ($rawEmail === null) {
+                $error = 'Failed to read uploaded file. Please ensure it is a valid .eml file.';
+                if ($this->isAjax()) {
+                    return $this->json(['error' => $error], 400);
+                }
+                return $this->render('scan/index', [
+                    'title' => 'Email Phishing Checker',
+                    'error' => $error,
+                    'activeTab' => 'full',
+                ]);
+            }
+        } else {
+            // Fall back to pasted content
+            $rawEmail = InputSanitizer::rawEmail($this->getPost('email_content', ''));
+        }
 
         if (empty($rawEmail)) {
+            $error = $inputMethod === 'upload'
+                ? 'Please upload an .eml file'
+                : 'Please paste the raw email content';
             if ($this->isAjax()) {
-                return $this->json(['error' => 'Please paste the raw email content'], 400);
+                return $this->json(['error' => $error], 400);
             }
             return $this->render('scan/index', [
                 'title' => 'Email Phishing Checker',
-                'error' => 'Please paste the raw email content',
+                'error' => $error,
                 'activeTab' => 'full',
             ]);
         }
@@ -98,6 +121,43 @@ class ScanController extends BaseController
         }
 
         return $this->redirect('/scan/' . $result['id']);
+    }
+
+    /**
+     * Handle .eml file upload
+     */
+    private function handleEmlUpload(array $file): ?string
+    {
+        // Validate file size (10MB max)
+        $maxSize = 10 * 1024 * 1024;
+        if ($file['size'] > $maxSize) {
+            return null;
+        }
+
+        // Validate file extension
+        $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+        if (!in_array($ext, ['eml', 'msg'])) {
+            return null;
+        }
+
+        // Validate MIME type (be lenient as some .eml files report different types)
+        $allowedTypes = [
+            'message/rfc822',
+            'text/plain',
+            'application/octet-stream',
+            'application/vnd.ms-outlook',
+        ];
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $mimeType = finfo_file($finfo, $file['tmp_name']);
+        finfo_close($finfo);
+
+        // Read file content
+        $content = file_get_contents($file['tmp_name']);
+        if ($content === false) {
+            return null;
+        }
+
+        return $content;
     }
 
     /**
