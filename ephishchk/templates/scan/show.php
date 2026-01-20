@@ -116,7 +116,7 @@ if (($scan['risk_score'] ?? 0) >= 50) {
                                 <strong>Record:</strong>
                                 <code><?= $e($details['record']) ?></code>
                             </div>
-                        <?php endif; ?>
+                        <?php endif;
 
                         // Issues display
                         if (!empty($details['issues']['errors'])): ?>
