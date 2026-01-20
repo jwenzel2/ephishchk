@@ -776,6 +776,48 @@ class ScanOrchestrator
             return 50; // Unknown
         }
 
+        // Check for critical failures that automatically trigger high risk
+        $criticalFailures = [];
+        foreach ($results as $result) {
+            $checkType = $result['check_type'];
+            $status = $result['status'];
+
+            // SPF or DKIM failure = automatic high risk
+            if (in_array($checkType, ['spf', 'dkim']) && $status === 'fail') {
+                $criticalFailures[] = strtoupper($checkType);
+            }
+
+            // DMARC failure = automatic high risk
+            if ($checkType === 'dmarc' && $status === 'fail') {
+                $criticalFailures[] = 'DMARC';
+            }
+
+            // VirusTotal malicious detection = automatic high risk
+            if (in_array($checkType, ['virustotal_url', 'virustotal_file']) && $status === 'fail') {
+                $criticalFailures[] = 'VirusTotal';
+            }
+        }
+
+        // If any critical failures, return high risk (minimum 65)
+        if (!empty($criticalFailures)) {
+            $this->logger->info('Critical authentication failures detected', [
+                'scan_id' => $scanId,
+                'failures' => $criticalFailures,
+            ]);
+
+            // Calculate base score but ensure minimum of 65 for critical failures
+            $baseScore = $this->calculateWeightedScore($results);
+            return max(65, $baseScore);
+        }
+
+        return $this->calculateWeightedScore($results);
+    }
+
+    /**
+     * Calculate weighted risk score from results
+     */
+    private function calculateWeightedScore(array $results): int
+    {
         $weights = [
             'spf' => 15,
             'dkim' => 15,
