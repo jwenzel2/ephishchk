@@ -113,6 +113,19 @@ server {
 }
 ```
 
+#### PHP Built-in Server (Development Only)
+
+For quick testing without configuring a web server:
+
+```bash
+cd ephishchk/ephishchk
+php -S localhost:8000 -t public public/router.php
+```
+
+Then open http://localhost:8000 in your browser.
+
+**Note:** The built-in server is for development only. Use Apache or Nginx in production.
+
 ### 4. Run the Installer
 
 Navigate to `http://your-domain/install.php` in your browser.
