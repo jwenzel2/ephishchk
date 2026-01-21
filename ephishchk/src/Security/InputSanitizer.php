@@ -50,11 +50,21 @@ class InputSanitizer
     {
         $sanitized = self::string($value);
 
+        if ($sanitized === '') {
+            return '';
+        }
+
         // Remove protocol if present
         $sanitized = preg_replace('#^https?://#i', '', $sanitized);
+        if ($sanitized === null) {
+            return '';
+        }
 
         // Remove path and query string
         $sanitized = preg_replace('#[/?#].*$#', '', $sanitized);
+        if ($sanitized === null || $sanitized === '') {
+            return '';
+        }
 
         // Lowercase
         $sanitized = strtolower($sanitized);
