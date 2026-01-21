@@ -128,7 +128,7 @@ class ScanOrchestrator
         $domain = $this->extractDomain($input);
         if (!$domain) {
             $this->logger->warning('Invalid input for quick check', ['input' => $input]);
-            return ['error' => 'Invalid email address or domain'];
+            return ['error' => 'Invalid email address'];
         }
 
         $this->logger->debug('Domain extracted', ['domain' => $domain]);

@@ -37,11 +37,11 @@ class ScanController extends BaseController
 
         if (empty($input)) {
             if ($this->isAjax()) {
-                return $this->json(['error' => 'Please enter an email address or domain'], 400);
+                return $this->json(['error' => 'Please enter an email address'], 400);
             }
             return $this->render('scan/index', [
                 'title' => 'Email Phishing Checker',
-                'error' => 'Please enter an email address or domain',
+                'error' => 'Please enter an email address',
             ]);
         }
 

@@ -22,9 +22,9 @@ $activeTab = $activeTab ?? 'quick';
             <form method="POST" action="/scan/quick" class="scan-form">
                 <?= $csrfField ?>
                 <div class="form-group">
-                    <label for="quick-input">Email Address or Domain</label>
+                    <label for="quick-input">Email Address</label>
                     <input type="text" id="quick-input" name="input"
-                           placeholder="example@domain.com or domain.com"
+                           placeholder="example@domain.com"
                            value="<?= $e($input ?? '') ?>" required>
                 </div>
                 <button type="submit" class="btn btn-primary">Check Authentication</button>
