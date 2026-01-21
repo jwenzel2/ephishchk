@@ -16,9 +16,23 @@ $e = fn($v) => OutputEncoder::html($v);
             <a href="/" class="logo">ephishchk</a>
             <ul class="nav-links">
                 <li><a href="/" class="<?= ($_SERVER['REQUEST_URI'] ?? '') === '/' ? 'active' : '' ?>">Scan</a></li>
+                <?php if (!empty($currentUser)): ?>
                 <li><a href="/history" class="<?= str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/history') ? 'active' : '' ?>">History</a></li>
                 <li><a href="/settings" class="<?= str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/settings') ? 'active' : '' ?>">Settings</a></li>
+                <?php endif; ?>
             </ul>
+            <div class="nav-auth">
+                <?php if (!empty($currentUser)): ?>
+                <span class="user-name"><?= $e($currentUser['display_name'] ?? $currentUser['email']) ?></span>
+                <form method="POST" action="/logout" class="logout-form">
+                    <input type="hidden" name="_csrf_token" value="<?= $csrfToken ?? '' ?>">
+                    <button type="submit" class="btn btn-secondary btn-small">Logout</button>
+                </form>
+                <?php else: ?>
+                <a href="/login" class="btn btn-secondary btn-small">Login</a>
+                <a href="/register" class="btn btn-primary btn-small">Register</a>
+                <?php endif; ?>
+            </div>
         </div>
     </nav>
 

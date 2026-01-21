@@ -9,6 +9,8 @@ use Ephishchk\Core\Request;
 use Ephishchk\Core\Response;
 use Ephishchk\Security\CsrfProtection;
 use Ephishchk\Security\OutputEncoder;
+use Ephishchk\Services\AuthService;
+use Ephishchk\Models\User;
 
 /**
  * Base Controller
@@ -18,12 +20,52 @@ abstract class BaseController
     protected Application $app;
     protected Request $request;
     protected CsrfProtection $csrf;
+    protected ?AuthService $authService = null;
 
     public function __construct(Application $app, Request $request)
     {
         $this->app = $app;
         $this->request = $request;
         $this->csrf = new CsrfProtection();
+    }
+
+    /**
+     * Get AuthService instance
+     */
+    protected function auth(): AuthService
+    {
+        if ($this->authService === null) {
+            $userModel = new User($this->app->getDatabase());
+            $this->authService = new AuthService($userModel);
+        }
+        return $this->authService;
+    }
+
+    /**
+     * Require authentication - redirects to login if not authenticated
+     */
+    protected function requireAuth(): ?Response
+    {
+        if (!$this->auth()->check()) {
+            return $this->redirect('/login');
+        }
+        return null;
+    }
+
+    /**
+     * Get current user ID
+     */
+    protected function getUserId(): ?int
+    {
+        return $this->auth()->userId();
+    }
+
+    /**
+     * Get current user data
+     */
+    protected function getUser(): ?array
+    {
+        return $this->auth()->user();
     }
 
     /**
@@ -34,6 +76,7 @@ abstract class BaseController
         // Add common data
         $data['csrfToken'] = $this->csrf->getToken();
         $data['csrfField'] = $this->csrf->getHiddenField();
+        $data['currentUser'] = $this->getUser();
 
         $content = $this->app->render($template, $data);
         return Response::html($content);

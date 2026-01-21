@@ -9,8 +9,16 @@ declare(strict_types=1);
 use Ephishchk\Controllers\ScanController;
 use Ephishchk\Controllers\HistoryController;
 use Ephishchk\Controllers\SettingsController;
+use Ephishchk\Controllers\AuthController;
 
 return [
+    // Authentication
+    ['GET', '/login', [AuthController::class, 'showLogin']],
+    ['POST', '/login', [AuthController::class, 'login']],
+    ['GET', '/register', [AuthController::class, 'showRegister']],
+    ['POST', '/register', [AuthController::class, 'register']],
+    ['POST', '/logout', [AuthController::class, 'logout']],
+
     // Home page - scan form
     ['GET', '/', [ScanController::class, 'index']],
 

@@ -18,6 +18,11 @@ class HistoryController extends BaseController
      */
     public function index(): Response
     {
+        // Require authentication
+        if ($redirect = $this->requireAuth()) {
+            return $redirect;
+        }
+
         $page = InputSanitizer::positiveInt($this->getQuery('page'), 1);
         $perPage = 20;
         $offset = ($page - 1) * $perPage;
@@ -25,8 +30,9 @@ class HistoryController extends BaseController
         $orchestrator = new ScanOrchestrator($this->app);
         $scanModel = $orchestrator->getScanModel();
 
-        $scans = $scanModel->getRecent($perPage, $offset);
-        $total = $scanModel->count();
+        $userId = $this->getUserId();
+        $scans = $scanModel->getRecentByUser($userId, $perPage, $offset);
+        $total = $scanModel->countByUser($userId);
         $totalPages = (int) ceil($total / $perPage);
 
         return $this->render('history/index', [
@@ -43,6 +49,11 @@ class HistoryController extends BaseController
      */
     public function delete(): Response
     {
+        // Require authentication
+        if ($redirect = $this->requireAuth()) {
+            return $redirect;
+        }
+
         $id = InputSanitizer::positiveInt($this->getParam('id'), 0);
 
         if ($id === 0) {
@@ -53,7 +64,15 @@ class HistoryController extends BaseController
         }
 
         $orchestrator = new ScanOrchestrator($this->app);
-        $deleted = $orchestrator->getScanModel()->delete($id);
+        $scanModel = $orchestrator->getScanModel();
+
+        // Check ownership before deleting
+        $scan = $scanModel->findForUser($id, $this->getUserId());
+        $deleted = false;
+
+        if ($scan) {
+            $deleted = $scanModel->delete($id);
+        }
 
         if ($this->isAjax()) {
             return $this->json(['success' => $deleted]);

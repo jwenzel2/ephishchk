@@ -120,9 +120,9 @@ class ScanOrchestrator
     /**
      * Perform quick check (domain/email authentication only)
      */
-    public function quickCheck(string $input, string $ipAddress): array
+    public function quickCheck(string $input, string $ipAddress, ?int $userId = null): array
     {
-        $this->logger->info('Quick check started', ['input' => $input, 'ip' => $ipAddress]);
+        $this->logger->info('Quick check started', ['input' => $input, 'ip' => $ipAddress, 'user_id' => $userId]);
 
         // Determine if input is email or domain
         $domain = $this->extractDomain($input);
@@ -135,11 +135,15 @@ class ScanOrchestrator
 
         try {
             // Create scan record
-            $scanId = $this->scanModel->create([
+            $scanData = [
                 'scan_type' => 'quick',
                 'input_identifier' => $input,
                 'ip_address' => $ipAddress,
-            ]);
+            ];
+            if ($userId !== null) {
+                $scanData['user_id'] = $userId;
+            }
+            $scanId = $this->scanModel->create($scanData);
 
             $this->logger->info('Scan record created', ['scan_id' => $scanId]);
 
@@ -177,9 +181,9 @@ class ScanOrchestrator
     /**
      * Perform full email analysis
      */
-    public function fullAnalysis(string $rawEmail, string $ipAddress): array
+    public function fullAnalysis(string $rawEmail, string $ipAddress, ?int $userId = null): array
     {
-        $this->logger->info('Full analysis started', ['ip' => $ipAddress, 'email_size' => strlen($rawEmail)]);
+        $this->logger->info('Full analysis started', ['ip' => $ipAddress, 'email_size' => strlen($rawEmail), 'user_id' => $userId]);
 
         // Size check
         $maxSize = $this->app->getConfig('max_email_size') ?? 10485760;
@@ -202,11 +206,15 @@ class ScanOrchestrator
 
         try {
             // Create scan record
-            $scanId = $this->scanModel->create([
+            $scanData = [
                 'scan_type' => 'full',
                 'input_identifier' => $identifier,
                 'ip_address' => $ipAddress,
-            ]);
+            ];
+            if ($userId !== null) {
+                $scanData['user_id'] = $userId;
+            }
+            $scanId = $this->scanModel->create($scanData);
 
             $this->logger->info('Scan record created', ['scan_id' => $scanId]);
 

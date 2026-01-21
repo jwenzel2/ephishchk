@@ -1102,6 +1102,71 @@ main {
     color: var(--color-text-muted);
 }
 
+/* Auth Pages */
+.auth-page {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 60vh;
+    padding: 2rem 0;
+}
+
+.auth-card {
+    width: 100%;
+    max-width: 420px;
+    margin: 0 auto;
+}
+
+.auth-card h1 {
+    text-align: center;
+    margin-bottom: 0.5rem;
+}
+
+.auth-card .card-description {
+    text-align: center;
+    margin-bottom: 1.5rem;
+}
+
+.auth-form .form-group {
+    margin-bottom: 1.25rem;
+}
+
+.auth-form .form-actions {
+    margin-top: 1.5rem;
+}
+
+.btn-block {
+    display: block;
+    width: 100%;
+}
+
+.auth-links {
+    text-align: center;
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--color-border);
+}
+
+.auth-links p {
+    color: var(--color-text-muted);
+}
+
+/* Navbar Auth Section */
+.nav-auth {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.user-name {
+    color: var(--color-text-muted);
+    font-weight: 500;
+}
+
+.logout-form {
+    display: inline;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .navbar .container {
@@ -1111,6 +1176,15 @@ main {
 
     .nav-links {
         gap: 1rem;
+    }
+
+    .nav-auth {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .auth-card {
+        margin: 0 1rem;
     }
 
     .summary-row {

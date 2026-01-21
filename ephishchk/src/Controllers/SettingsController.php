@@ -18,6 +18,11 @@ class SettingsController extends BaseController
      */
     public function index(): Response
     {
+        // Require authentication
+        if ($redirect = $this->requireAuth()) {
+            return $redirect;
+        }
+
         $orchestrator = new ScanOrchestrator($this->app);
         $settings = $orchestrator->getSettingModel()->all();
 
@@ -41,6 +46,11 @@ class SettingsController extends BaseController
      */
     public function save(): Response
     {
+        // Require authentication
+        if ($redirect = $this->requireAuth()) {
+            return $redirect;
+        }
+
         $orchestrator = new ScanOrchestrator($this->app);
         $settingModel = $orchestrator->getSettingModel();
 
@@ -80,6 +90,11 @@ class SettingsController extends BaseController
      */
     public function testVirusTotal(): Response
     {
+        // Require authentication
+        if (!$this->auth()->check()) {
+            return $this->json(['error' => 'Unauthorized'], 401);
+        }
+
         $orchestrator = new ScanOrchestrator($this->app);
         $vtClient = $orchestrator->getVirusTotalClient();
 

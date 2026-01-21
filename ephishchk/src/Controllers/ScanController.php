@@ -28,6 +28,11 @@ class ScanController extends BaseController
      */
     public function quickCheck(): Response
     {
+        // Require authentication
+        if ($redirect = $this->requireAuth()) {
+            return $redirect;
+        }
+
         $input = InputSanitizer::string($this->getPost('input', ''));
 
         if (empty($input)) {
@@ -41,7 +46,7 @@ class ScanController extends BaseController
         }
 
         $orchestrator = new ScanOrchestrator($this->app);
-        $result = $orchestrator->quickCheck($input, $this->request->getClientIp());
+        $result = $orchestrator->quickCheck($input, $this->request->getClientIp(), $this->getUserId());
 
         if (isset($result['error'])) {
             if ($this->isAjax()) {
@@ -66,6 +71,11 @@ class ScanController extends BaseController
      */
     public function fullAnalysis(): Response
     {
+        // Require authentication
+        if ($redirect = $this->requireAuth()) {
+            return $redirect;
+        }
+
         $rawEmail = '';
         $inputMethod = $this->getPost('input_method', 'paste');
 
@@ -103,7 +113,7 @@ class ScanController extends BaseController
         }
 
         $orchestrator = new ScanOrchestrator($this->app);
-        $result = $orchestrator->fullAnalysis($rawEmail, $this->request->getClientIp());
+        $result = $orchestrator->fullAnalysis($rawEmail, $this->request->getClientIp(), $this->getUserId());
 
         if (isset($result['error'])) {
             if ($this->isAjax()) {
@@ -165,6 +175,11 @@ class ScanController extends BaseController
      */
     public function status(): Response
     {
+        // Require authentication
+        if (!$this->auth()->check()) {
+            return $this->json(['error' => 'Unauthorized'], 401);
+        }
+
         $id = InputSanitizer::positiveInt($this->getParam('id'), 0);
 
         if ($id === 0) {
@@ -172,7 +187,7 @@ class ScanController extends BaseController
         }
 
         $orchestrator = new ScanOrchestrator($this->app);
-        $scan = $orchestrator->getScanModel()->find($id);
+        $scan = $orchestrator->getScanModel()->findForUser($id, $this->getUserId());
 
         if (!$scan) {
             return $this->json(['error' => 'Scan not found'], 404);
@@ -190,6 +205,11 @@ class ScanController extends BaseController
      */
     public function show(): Response
     {
+        // Require authentication
+        if ($redirect = $this->requireAuth()) {
+            return $redirect;
+        }
+
         $id = InputSanitizer::positiveInt($this->getParam('id'), 0);
 
         if ($id === 0) {
@@ -197,7 +217,7 @@ class ScanController extends BaseController
         }
 
         $orchestrator = new ScanOrchestrator($this->app);
-        $scan = $orchestrator->getScanModel()->findWithResults($id);
+        $scan = $orchestrator->getScanModel()->findWithResultsForUser($id, $this->getUserId());
 
         if (!$scan) {
             return Response::notFound('Scan not found');
