@@ -784,20 +784,23 @@ class ScanOrchestrator
             return 50; // Unknown
         }
 
-        // Check for critical failures that automatically trigger high risk
+        // Track authentication check statuses
+        $authStatus = [
+            'spf' => null,
+            'dkim' => null,
+            'dmarc' => null,
+        ];
+
+        // Track other critical failures
         $criticalFailures = [];
+
         foreach ($results as $result) {
             $checkType = $result['check_type'];
             $status = $result['status'];
 
-            // SPF or DKIM failure = automatic high risk
-            if (in_array($checkType, ['spf', 'dkim']) && $status === 'fail') {
-                $criticalFailures[] = strtoupper($checkType) . ' (no record)';
-            }
-
-            // DMARC failure = automatic high risk
-            if ($checkType === 'dmarc' && $status === 'fail') {
-                $criticalFailures[] = 'DMARC (no record)';
+            // Track SPF/DKIM/DMARC statuses
+            if (in_array($checkType, ['spf', 'dkim', 'dmarc'])) {
+                $authStatus[$checkType] = $status;
             }
 
             // VirusTotal malicious detection = automatic high risk
@@ -811,19 +814,19 @@ class ScanOrchestrator
                     $findingType = $finding['type'] ?? '';
                     $severity = $finding['severity'] ?? '';
 
-                    // SPF failure in Authentication-Results
+                    // SPF failure in Authentication-Results (overrides DNS check)
                     if ($findingType === 'spf_failure' && $severity === 'high') {
-                        $criticalFailures[] = 'SPF (auth failed)';
+                        $authStatus['spf'] = 'fail';
                     }
 
-                    // DKIM failure in Authentication-Results
+                    // DKIM failure in Authentication-Results (overrides DNS check)
                     if ($findingType === 'dkim_failure' && $severity === 'high') {
-                        $criticalFailures[] = 'DKIM (auth failed)';
+                        $authStatus['dkim'] = 'fail';
                     }
 
-                    // DMARC failure in Authentication-Results
+                    // DMARC failure in Authentication-Results (overrides DNS check)
                     if ($findingType === 'dmarc_failure' && $severity === 'high') {
-                        $criticalFailures[] = 'DMARC (auth failed)';
+                        $authStatus['dmarc'] = 'fail';
                     }
 
                     // Display name spoofing = high risk
@@ -834,19 +837,60 @@ class ScanOrchestrator
             }
         }
 
-        // If any critical failures, return high risk (minimum 65)
-        if (!empty($criticalFailures)) {
-            $this->logger->info('Critical authentication failures detected', [
-                'scan_id' => $scanId,
-                'failures' => array_unique($criticalFailures),
-            ]);
+        // Calculate base score from weighted factors
+        $baseScore = $this->calculateWeightedScore($results);
 
-            // Calculate base score but ensure minimum of 65 for critical failures
-            $baseScore = $this->calculateWeightedScore($results);
+        // Determine authentication-based risk level
+        $spfPass = $authStatus['spf'] === 'pass';
+        $dkimPass = $authStatus['dkim'] === 'pass';
+        $dmarcPass = $authStatus['dmarc'] === 'pass';
+        $spfFail = $authStatus['spf'] === 'fail';
+        $dkimFail = $authStatus['dkim'] === 'fail';
+        $dmarcFail = $authStatus['dmarc'] === 'fail';
+
+        // All three fail = automatic high risk (minimum 65)
+        if ($spfFail && $dkimFail && $dmarcFail) {
+            $this->logger->info('All authentication checks failed - high risk', [
+                'scan_id' => $scanId,
+                'spf' => $authStatus['spf'],
+                'dkim' => $authStatus['dkim'],
+                'dmarc' => $authStatus['dmarc'],
+            ]);
             return max(65, $baseScore);
         }
 
-        return $this->calculateWeightedScore($results);
+        // SPF pass + DMARC pass + DKIM fail = automatic medium risk (minimum 40)
+        if ($spfPass && $dmarcPass && $dkimFail) {
+            $this->logger->info('DKIM failed with SPF/DMARC pass - medium risk', [
+                'scan_id' => $scanId,
+                'spf' => $authStatus['spf'],
+                'dkim' => $authStatus['dkim'],
+                'dmarc' => $authStatus['dmarc'],
+            ]);
+            return max(40, $baseScore);
+        }
+
+        // DKIM pass + DMARC pass + SPF fail = automatic medium risk (minimum 40)
+        if ($dkimPass && $dmarcPass && $spfFail) {
+            $this->logger->info('SPF failed with DKIM/DMARC pass - medium risk', [
+                'scan_id' => $scanId,
+                'spf' => $authStatus['spf'],
+                'dkim' => $authStatus['dkim'],
+                'dmarc' => $authStatus['dmarc'],
+            ]);
+            return max(40, $baseScore);
+        }
+
+        // Other critical failures (VirusTotal, display name spoofing) = high risk
+        if (!empty($criticalFailures)) {
+            $this->logger->info('Critical failures detected - high risk', [
+                'scan_id' => $scanId,
+                'failures' => array_unique($criticalFailures),
+            ]);
+            return max(65, $baseScore);
+        }
+
+        return $baseScore;
     }
 
     /**
