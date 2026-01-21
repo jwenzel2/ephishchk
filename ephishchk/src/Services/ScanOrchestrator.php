@@ -824,9 +824,10 @@ class ScanOrchestrator
                         $authStatus['dkim'] = 'fail';
                     }
 
-                    // DMARC failure in Authentication-Results (overrides DNS check)
+                    // DMARC failure in Authentication-Results = automatic high risk
                     if ($findingType === 'dmarc_failure' && $severity === 'high') {
                         $authStatus['dmarc'] = 'fail';
+                        $criticalFailures[] = 'DMARC (Authentication-Results)';
                     }
 
                     // Display name spoofing = high risk
