@@ -17,7 +17,7 @@ $activeTab = $activeTab ?? 'quick';
     <div class="tab-content <?= $activeTab === 'quick' ? 'active' : '' ?>" id="tab-quick">
         <div class="card">
             <h2>Quick Check</h2>
-            <p>Check email authentication (SPF, DKIM, DMARC) for a domain or email address.</p>
+            <p>Check email authentication (SPF, DKIM, DMARC) for an email address.</p>
 
             <form method="POST" action="/scan/quick" class="scan-form">
                 <?= $csrfField ?>
