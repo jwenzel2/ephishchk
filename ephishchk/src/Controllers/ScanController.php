@@ -28,11 +28,6 @@ class ScanController extends BaseController
      */
     public function quickCheck(): Response
     {
-        // Require authentication
-        if ($redirect = $this->requireAuth()) {
-            return $redirect;
-        }
-
         $input = InputSanitizer::string($this->getPost('input', ''));
 
         if (empty($input)) {
@@ -71,11 +66,6 @@ class ScanController extends BaseController
      */
     public function fullAnalysis(): Response
     {
-        // Require authentication
-        if ($redirect = $this->requireAuth()) {
-            return $redirect;
-        }
-
         $rawEmail = '';
         $inputMethod = $this->getPost('input_method', 'paste');
 
@@ -175,11 +165,6 @@ class ScanController extends BaseController
      */
     public function status(): Response
     {
-        // Require authentication
-        if (!$this->auth()->check()) {
-            return $this->json(['error' => 'Unauthorized'], 401);
-        }
-
         $id = InputSanitizer::positiveInt($this->getParam('id'), 0);
 
         if ($id === 0) {
@@ -187,9 +172,18 @@ class ScanController extends BaseController
         }
 
         $orchestrator = new ScanOrchestrator($this->app);
-        $scan = $orchestrator->getScanModel()->findForUser($id, $this->getUserId());
+        $scanModel = $orchestrator->getScanModel();
+        $scan = $scanModel->find($id);
 
         if (!$scan) {
+            return $this->json(['error' => 'Scan not found'], 404);
+        }
+
+        // Allow access if: scan has no user_id (anonymous) OR user owns the scan
+        $scanUserId = $scan['user_id'] ?? null;
+        $currentUserId = $this->getUserId();
+
+        if ($scanUserId !== null && $scanUserId !== $currentUserId) {
             return $this->json(['error' => 'Scan not found'], 404);
         }
 
@@ -205,11 +199,6 @@ class ScanController extends BaseController
      */
     public function show(): Response
     {
-        // Require authentication
-        if ($redirect = $this->requireAuth()) {
-            return $redirect;
-        }
-
         $id = InputSanitizer::positiveInt($this->getParam('id'), 0);
 
         if ($id === 0) {
@@ -217,9 +206,18 @@ class ScanController extends BaseController
         }
 
         $orchestrator = new ScanOrchestrator($this->app);
-        $scan = $orchestrator->getScanModel()->findWithResultsForUser($id, $this->getUserId());
+        $scanModel = $orchestrator->getScanModel();
+        $scan = $scanModel->findWithResults($id);
 
         if (!$scan) {
+            return Response::notFound('Scan not found');
+        }
+
+        // Allow access if: scan has no user_id (anonymous) OR user owns the scan
+        $scanUserId = $scan['user_id'] ?? null;
+        $currentUserId = $this->getUserId();
+
+        if ($scanUserId !== null && $scanUserId !== $currentUserId) {
             return Response::notFound('Scan not found');
         }
 
