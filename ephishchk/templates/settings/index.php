@@ -75,6 +75,41 @@ $saved = isset($_GET['saved']);
         </div>
 
         <div class="card">
+            <h2>Server Settings</h2>
+            <p class="card-description">Configure server-wide settings.</p>
+
+            <div class="form-group">
+                <label for="timezone">Timezone</label>
+                <select id="timezone" name="timezone">
+                    <?php
+                    $currentTz = $settings['timezone']['value'] ?? 'UTC';
+                    $timezones = [
+                        'America/New_York' => 'Eastern Time (ET)',
+                        'America/Chicago' => 'Central Time (CT)',
+                        'America/Denver' => 'Mountain Time (MT)',
+                        'America/Los_Angeles' => 'Pacific Time (PT)',
+                        'America/Anchorage' => 'Alaska Time (AKT)',
+                        'Pacific/Honolulu' => 'Hawaii Time (HT)',
+                        'America/Phoenix' => 'Arizona (No DST)',
+                        'UTC' => 'UTC (Coordinated Universal Time)',
+                        'Europe/London' => 'London (GMT/BST)',
+                        'Europe/Paris' => 'Paris (CET/CEST)',
+                        'Europe/Berlin' => 'Berlin (CET/CEST)',
+                        'Asia/Tokyo' => 'Tokyo (JST)',
+                        'Asia/Shanghai' => 'Shanghai (CST)',
+                        'Asia/Kolkata' => 'India (IST)',
+                        'Australia/Sydney' => 'Sydney (AEST/AEDT)',
+                    ];
+                    foreach ($timezones as $tz => $label):
+                    ?>
+                    <option value="<?= $tz ?>" <?= $currentTz === $tz ? 'selected' : '' ?>><?= $e($label) ?></option>
+                    <?php endforeach; ?>
+                </select>
+                <small>Server timezone for displaying dates and times. Current time: <?= date('g:i A T') ?></small>
+            </div>
+        </div>
+
+        <div class="card">
             <h2>Scan Settings</h2>
 
             <div class="form-group">

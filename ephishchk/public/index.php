@@ -88,6 +88,19 @@ use Ephishchk\Core\Request;
 
 try {
     $app = new Application($config);
+
+    // Load timezone from database settings (overrides config)
+    try {
+        $db = $app->getDatabase();
+        $tzRow = $db->fetchOne('SELECT setting_value FROM settings WHERE setting_key = ?', ['timezone']);
+        if ($tzRow && !empty($tzRow['setting_value'])) {
+            date_default_timezone_set($tzRow['setting_value']);
+        }
+    } catch (Throwable $e) {
+        // Database not ready or settings table doesn't exist yet - use config timezone
+        $logger->debug('Could not load timezone from database: ' . $e->getMessage());
+    }
+
     $request = Request::createFromGlobals();
     $response = $app->handle($request);
     $response->send();

@@ -78,6 +78,18 @@ class SettingsController extends BaseController
         $settingModel->set('enable_vt_file_scan', InputSanitizer::boolean($this->getPost('enable_vt_file_scan', false)), 'boolean');
         $settingModel->set('enable_vt_url_scan', InputSanitizer::boolean($this->getPost('enable_vt_url_scan', false)), 'boolean');
 
+        // Timezone setting
+        $timezone = $this->getPost('timezone', 'UTC');
+        $validTimezones = [
+            'America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles',
+            'America/Anchorage', 'Pacific/Honolulu', 'America/Phoenix', 'UTC',
+            'Europe/London', 'Europe/Paris', 'Europe/Berlin',
+            'Asia/Tokyo', 'Asia/Shanghai', 'Asia/Kolkata', 'Australia/Sydney',
+        ];
+        if (in_array($timezone, $validTimezones)) {
+            $settingModel->set('timezone', $timezone, 'string');
+        }
+
         if ($this->isAjax()) {
             return $this->json(['success' => true, 'message' => 'Settings saved']);
         }
