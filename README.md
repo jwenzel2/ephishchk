@@ -79,9 +79,9 @@ Point your document root to the `public` directory. The included `.htaccess` fil
 ```apache
 <VirtualHost *:80>
     ServerName ephishchk.local
-    DocumentRoot /path/to/ephishchk/ephishchk/public
+    DocumentRoot /path/to/ephishchkpublic
 
-    <Directory /path/to/ephishchk/ephishchk/public>
+    <Directory /path/to/ephishchk/public>
         AllowOverride All
         Require all granted
     </Directory>
@@ -94,7 +94,7 @@ Point your document root to the `public` directory. The included `.htaccess` fil
 server {
     listen 80;
     server_name ephishchk.local;
-    root /path/to/ephishchk/ephishchk/public;
+    root /path/to/ephishchk/public;
     index index.php;
 
     location / {
@@ -118,7 +118,7 @@ server {
 For quick testing without configuring a web server:
 
 ```bash
-cd ephishchk/ephishchk
+cd ephishchk/
 php -S localhost:8000 -t public public/router.php
 ```
 
@@ -224,7 +224,7 @@ To enable file and URL scanning via VirusTotal:
 ## Project Structure
 
 ```
-ephishchk/
+/
 ├── public/                     # Web root
 │   ├── index.php               # Front controller
 │   ├── .htaccess               # Apache rewrite rules
