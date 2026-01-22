@@ -88,6 +88,26 @@ try {
         $migrated++;
     }
 
+    // Create default admin user if not exists
+    $adminCreated = false;
+    try {
+        $stmt = $pdo->prepare("SELECT id FROM users WHERE email = ?");
+        $stmt->execute(['admin@admin.com']);
+
+        if (!$stmt->fetch()) {
+            $passwordHash = password_hash('admin', PASSWORD_BCRYPT, ['cost' => 12]);
+            $stmt = $pdo->prepare("
+                INSERT INTO users (email, password_hash, display_name, is_active, role, created_at, updated_at)
+                VALUES (?, ?, ?, 1, 'admin', NOW(), NOW())
+            ");
+            $stmt->execute(['admin@admin.com', $passwordHash, 'Administrator']);
+            $adminCreated = true;
+            echo "→ Created default admin user (admin@admin.com / admin)\n";
+        }
+    } catch (PDOException $e) {
+        // Role column might not exist yet - that's ok
+    }
+
     echo "\n============================\n";
     if ($migrated > 0) {
         echo "Completed $migrated migration(s)\n";

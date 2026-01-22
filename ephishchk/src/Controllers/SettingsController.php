@@ -9,7 +9,7 @@ use Ephishchk\Services\ScanOrchestrator;
 use Ephishchk\Security\InputSanitizer;
 
 /**
- * Settings Controller
+ * Settings Controller - Server Configuration (Admin Only)
  */
 class SettingsController extends BaseController
 {
@@ -18,8 +18,8 @@ class SettingsController extends BaseController
      */
     public function index(): Response
     {
-        // Require authentication
-        if ($redirect = $this->requireAuth()) {
+        // Require admin access
+        if ($redirect = $this->requireAdmin()) {
             return $redirect;
         }
 
@@ -46,8 +46,8 @@ class SettingsController extends BaseController
      */
     public function save(): Response
     {
-        // Require authentication
-        if ($redirect = $this->requireAuth()) {
+        // Require admin access
+        if ($redirect = $this->requireAdmin()) {
             return $redirect;
         }
 
@@ -90,8 +90,8 @@ class SettingsController extends BaseController
      */
     public function testVirusTotal(): Response
     {
-        // Require authentication
-        if (!$this->auth()->check()) {
+        // Require admin access
+        if (!$this->isAdmin()) {
             return $this->json(['error' => 'Unauthorized'], 401);
         }
 

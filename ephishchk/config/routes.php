@@ -10,6 +10,8 @@ use Ephishchk\Controllers\ScanController;
 use Ephishchk\Controllers\HistoryController;
 use Ephishchk\Controllers\SettingsController;
 use Ephishchk\Controllers\AuthController;
+use Ephishchk\Controllers\AdminController;
+use Ephishchk\Controllers\PreferencesController;
 
 return [
     // Authentication
@@ -48,4 +50,14 @@ return [
 
     // Test VirusTotal connection
     ['POST', '/settings/test-virustotal', [SettingsController::class, 'testVirusTotal']],
+
+    // User preferences
+    ['GET', '/preferences', [PreferencesController::class, 'index']],
+    ['POST', '/preferences', [PreferencesController::class, 'save']],
+    ['POST', '/preferences/password', [PreferencesController::class, 'changePassword']],
+
+    // Admin - User Management
+    ['GET', '/admin/users', [AdminController::class, 'users']],
+    ['POST', '/admin/users/role', [AdminController::class, 'updateRole']],
+    ['POST', '/admin/users/toggle-active', [AdminController::class, 'toggleActive']],
 ];

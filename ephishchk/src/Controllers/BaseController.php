@@ -53,6 +53,21 @@ abstract class BaseController
     }
 
     /**
+     * Require admin role - redirects to home if not admin
+     */
+    protected function requireAdmin(): ?Response
+    {
+        if ($redirect = $this->requireAuth()) {
+            return $redirect;
+        }
+
+        if (!$this->isAdmin()) {
+            return $this->redirect('/');
+        }
+        return null;
+    }
+
+    /**
      * Get current user ID
      */
     protected function getUserId(): ?int
@@ -66,6 +81,24 @@ abstract class BaseController
     protected function getUser(): ?array
     {
         return $this->auth()->user();
+    }
+
+    /**
+     * Check if current user is admin
+     */
+    protected function isAdmin(): bool
+    {
+        $user = $this->getUser();
+        return $user && ($user['role'] ?? 'user') === 'admin';
+    }
+
+    /**
+     * Get current user's role
+     */
+    protected function getUserRole(): ?string
+    {
+        $user = $this->getUser();
+        return $user ? ($user['role'] ?? 'user') : null;
     }
 
     /**

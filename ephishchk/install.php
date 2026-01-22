@@ -333,12 +333,22 @@ function runMigrations(array $data): array {
             ];
         }
 
+        // Create default admin user if not exists
+        $adminCreated = createDefaultAdmin($pdo);
+
+        $message = count($migrated) > 0
+            ? 'Ran ' . count($migrated) . ' migration(s) successfully'
+            : 'Database is up to date';
+
+        if ($adminCreated) {
+            $message .= '. Default admin account created (admin@admin.com / admin)';
+        }
+
         return [
             'success' => true,
-            'message' => count($migrated) > 0
-                ? 'Ran ' . count($migrated) . ' migration(s) successfully'
-                : 'Database is up to date',
+            'message' => $message,
             'migrated' => $migrated,
+            'admin_created' => $adminCreated,
         ];
 
     } catch (PDOException $e) {
@@ -346,6 +356,36 @@ function runMigrations(array $data): array {
             'success' => false,
             'error' => 'Migration failed: ' . $e->getMessage(),
         ];
+    }
+}
+
+/**
+ * Create default admin user
+ */
+function createDefaultAdmin(PDO $pdo): bool {
+    try {
+        // Check if admin user already exists
+        $stmt = $pdo->prepare("SELECT id FROM users WHERE email = ?");
+        $stmt->execute(['admin@admin.com']);
+
+        if ($stmt->fetch()) {
+            return false; // Already exists
+        }
+
+        // Create admin user with bcrypt password hash
+        $passwordHash = password_hash('admin', PASSWORD_BCRYPT, ['cost' => 12]);
+
+        $stmt = $pdo->prepare("
+            INSERT INTO users (email, password_hash, display_name, is_active, role, created_at, updated_at)
+            VALUES (?, ?, ?, 1, 'admin', NOW(), NOW())
+        ");
+        $stmt->execute(['admin@admin.com', $passwordHash, 'Administrator']);
+
+        return true;
+
+    } catch (PDOException $e) {
+        // Table might not exist yet or role column missing - that's ok
+        return false;
     }
 }
 

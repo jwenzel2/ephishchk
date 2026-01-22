@@ -92,4 +92,52 @@ class User
     {
         return (bool) ($user['is_active'] ?? false);
     }
+
+    /**
+     * Check if user is admin
+     */
+    public function isAdmin(array $user): bool
+    {
+        return ($user['role'] ?? 'user') === 'admin';
+    }
+
+    /**
+     * Get user role
+     */
+    public function getRole(array $user): string
+    {
+        return $user['role'] ?? 'user';
+    }
+
+    /**
+     * Set user role (admin only operation)
+     */
+    public function setRole(int $id, string $role): bool
+    {
+        if (!in_array($role, ['user', 'admin'])) {
+            return false;
+        }
+
+        $this->db->update('users', ['role' => $role], 'id = ?', [$id]);
+        return true;
+    }
+
+    /**
+     * Get all users (for admin panel)
+     */
+    public function getAll(int $limit = 100, int $offset = 0): array
+    {
+        return $this->db->fetchAll(
+            'SELECT id, email, display_name, role, is_active, created_at, last_login_at FROM users ORDER BY created_at DESC LIMIT ? OFFSET ?',
+            [$limit, $offset]
+        );
+    }
+
+    /**
+     * Count all users
+     */
+    public function count(): int
+    {
+        return (int) $this->db->fetchColumn('SELECT COUNT(*) FROM users');
+    }
 }
