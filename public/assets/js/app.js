@@ -11,6 +11,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // File upload functionality
     initFileUpload();
+
+    // Initialize pagination for all lists
+    initPagination();
 });
 
 /**
@@ -275,8 +278,12 @@ function initFileUpload() {
  * Show inline notification below element
  */
 function showInlineNotification(element, message, type = 'info', duration = 3000) {
+    // Find the container (vt-cell-container)
+    const container = element.closest('.vt-cell-container');
+    if (!container) return null;
+
     // Remove any existing inline notification
-    const existingNotif = element.parentElement.querySelector('.inline-notification');
+    const existingNotif = container.querySelector('.inline-notification');
     if (existingNotif) {
         existingNotif.remove();
     }
@@ -286,8 +293,8 @@ function showInlineNotification(element, message, type = 'info', duration = 3000
     notification.className = `inline-notification inline-notification-${type}`;
     notification.textContent = message;
 
-    // Insert after the element
-    element.parentElement.appendChild(notification);
+    // Append to container
+    container.appendChild(notification);
 
     // Auto-remove after duration (if duration > 0)
     if (duration > 0) {
@@ -312,8 +319,11 @@ async function scanUrlWithVirusTotal(button) {
         return;
     }
 
-    // Remove any existing notification
-    const existingNotif = button.parentElement.querySelector('.inline-notification');
+    // Find container and remove any existing notification
+    const container = button.closest('.vt-cell-container');
+    if (!container) return;
+
+    const existingNotif = container.querySelector('.inline-notification');
     if (existingNotif) {
         existingNotif.remove();
     }
@@ -389,11 +399,10 @@ async function scanUrlWithVirusTotal(button) {
                 <span class="vt-status">${escapeHtml(status)}</span>
             </div>
         `;
-        const parentCell = button.parentElement;
-        parentCell.innerHTML = resultHtml;
+        container.innerHTML = resultHtml;
 
         // Show success notification under the result
-        const vtResult = parentCell.querySelector('.vt-result');
+        const vtResult = container.querySelector('.vt-result');
         showInlineNotification(vtResult, 'Scan successful!', 'success', 3000);
 
         // Update overall risk score
@@ -452,4 +461,91 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+/**
+ * Initialize pagination for all paginated lists
+ */
+function initPagination() {
+    const paginatedLists = document.querySelectorAll('[data-paginate]');
+
+    paginatedLists.forEach(list => {
+        const itemsPerPage = parseInt(list.dataset.paginate) || 20;
+        const items = Array.from(list.children);
+        const totalItems = items.length;
+
+        // Only paginate if we have more items than the limit
+        if (totalItems <= itemsPerPage) {
+            return;
+        }
+
+        // Find or create pagination controls
+        let controlsContainer = list.nextElementSibling;
+        if (!controlsContainer || !controlsContainer.classList.contains('pagination-controls')) {
+            controlsContainer = document.createElement('div');
+            controlsContainer.className = 'pagination-controls';
+            list.parentNode.insertBefore(controlsContainer, list.nextSibling);
+        }
+
+        let currentPage = 1;
+        const totalPages = Math.ceil(totalItems / itemsPerPage);
+
+        const showPage = (page) => {
+            const startIndex = (page - 1) * itemsPerPage;
+            const endIndex = startIndex + itemsPerPage;
+
+            items.forEach((item, index) => {
+                if (index >= startIndex && index < endIndex) {
+                    item.style.display = '';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+
+            updatePaginationControls();
+        };
+
+        const updatePaginationControls = () => {
+            controlsContainer.innerHTML = `
+                <div class="pagination">
+                    <button class="pagination-btn" ${currentPage === 1 ? 'disabled' : ''} onclick="changePage(this, -1)">
+                        Previous
+                    </button>
+                    <span class="pagination-info">
+                        Page ${currentPage} of ${totalPages} (${totalItems} items)
+                    </span>
+                    <button class="pagination-btn" ${currentPage === totalPages ? 'disabled' : ''} onclick="changePage(this, 1)">
+                        Next
+                    </button>
+                </div>
+            `;
+        };
+
+        // Store pagination data on the list element
+        list._paginationData = {
+            currentPage,
+            totalPages,
+            itemsPerPage,
+            showPage: (page) => {
+                currentPage = Math.max(1, Math.min(page, totalPages));
+                showPage(currentPage);
+            }
+        };
+
+        // Show first page
+        showPage(1);
+    });
+}
+
+/**
+ * Change page for pagination
+ */
+function changePage(button, delta) {
+    const controls = button.closest('.pagination-controls');
+    const list = controls.previousElementSibling;
+
+    if (list && list._paginationData) {
+        const newPage = list._paginationData.currentPage + delta;
+        list._paginationData.showPage(newPage);
+    }
 }

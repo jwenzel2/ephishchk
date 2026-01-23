@@ -228,35 +228,37 @@ if (($scan['risk_score'] ?? 0) >= 50) {
                             <?php endif; ?>
                         </td>
                         <td class="vt-scan-cell">
-                            <?php if ($vtResult && isset($vtResult['scanned_individually'])): ?>
-                                <?php
-                                    $malicious = $vtResult['result']['stats']['malicious'] ?? 0;
-                                    $suspicious = $vtResult['result']['stats']['suspicious'] ?? 0;
-                                    $total = $vtResult['result']['total_vendors'] ?? 0;
-                                    $detectionRate = $vtResult['result']['detection_rate'] ?? '0/0';
+                            <div class="vt-cell-container">
+                                <?php if ($vtResult && isset($vtResult['scanned_individually'])): ?>
+                                    <?php
+                                        $malicious = $vtResult['result']['stats']['malicious'] ?? 0;
+                                        $suspicious = $vtResult['result']['stats']['suspicious'] ?? 0;
+                                        $total = $vtResult['result']['total_vendors'] ?? 0;
+                                        $detectionRate = $vtResult['result']['detection_rate'] ?? '0/0';
 
-                                    $vtStatus = 'Clean';
-                                    $vtBadgeClass = 'success';
-                                    if ($malicious > 0) {
-                                        $vtStatus = 'Malicious';
-                                        $vtBadgeClass = 'error';
-                                    } elseif ($suspicious > 0) {
-                                        $vtStatus = 'Suspicious';
-                                        $vtBadgeClass = 'warning';
-                                    }
-                                ?>
-                                <div class="vt-result">
-                                    <span class="badge badge-<?= $vtBadgeClass ?>"><?= $e($detectionRate) ?></span>
-                                    <span class="vt-status"><?= $e($vtStatus) ?></span>
-                                </div>
-                            <?php else: ?>
-                                <button class="btn btn-sm btn-vt-scan"
-                                        data-scan-id="<?= $scan['id'] ?>"
-                                        data-url="<?= $e($link['url']) ?>"
-                                        onclick="scanUrlWithVirusTotal(this)">
-                                    Scan with VT
-                                </button>
-                            <?php endif; ?>
+                                        $vtStatus = 'Clean';
+                                        $vtBadgeClass = 'success';
+                                        if ($malicious > 0) {
+                                            $vtStatus = 'Malicious';
+                                            $vtBadgeClass = 'error';
+                                        } elseif ($suspicious > 0) {
+                                            $vtStatus = 'Suspicious';
+                                            $vtBadgeClass = 'warning';
+                                        }
+                                    ?>
+                                    <div class="vt-result">
+                                        <span class="badge badge-<?= $vtBadgeClass ?>"><?= $e($detectionRate) ?></span>
+                                        <span class="vt-status"><?= $e($vtStatus) ?></span>
+                                    </div>
+                                <?php else: ?>
+                                    <button class="btn btn-sm btn-vt-scan"
+                                            data-scan-id="<?= $scan['id'] ?>"
+                                            data-url="<?= $e($link['url']) ?>"
+                                            onclick="scanUrlWithVirusTotal(this)">
+                                        Scan with VT
+                                    </button>
+                                <?php endif; ?>
+                            </div>
                         </td>
                     </tr>
                     <?php endforeach; ?>
@@ -371,17 +373,15 @@ if (($scan['risk_score'] ?? 0) >= 50) {
                         if (!empty($details['links'])): ?>
                             <div class="detail-item">
                                 <strong>Links Found (<?= count($details['links']) ?>):</strong>
-                                <ul class="links-list">
-                                    <?php foreach (array_slice($details['links'], 0, 10) as $link): ?>
+                                <ul class="links-list paginated-list" data-paginate="20">
+                                    <?php foreach ($details['links'] as $link): ?>
                                         <li class="link-item risk-<?= $e($link['risk_level'] ?? 'low') ?>">
                                             <span class="link-url"><?= $e($link['url']) ?></span>
                                             <span class="link-score">Score: <?= (int)$link['score'] ?></span>
                                         </li>
                                     <?php endforeach; ?>
-                                    <?php if (count($details['links']) > 10): ?>
-                                        <li><em>... and <?= count($details['links']) - 10 ?> more</em></li>
-                                    <?php endif; ?>
                                 </ul>
+                                <div class="pagination-controls"></div>
                             </div>
                         <?php endif;
 
@@ -389,7 +389,7 @@ if (($scan['risk_score'] ?? 0) >= 50) {
                         if (!empty($details['attachments'])): ?>
                             <div class="detail-item">
                                 <strong>Attachments:</strong>
-                                <ul class="attachments-list">
+                                <ul class="attachments-list paginated-list" data-paginate="20">
                                     <?php foreach ($details['attachments'] as $att): ?>
                                         <li class="attachment-item risk-<?= $e($att['risk_level']) ?>">
                                             <span class="att-name"><?= $e($att['filename']) ?></span>
@@ -398,6 +398,7 @@ if (($scan['risk_score'] ?? 0) >= 50) {
                                         </li>
                                     <?php endforeach; ?>
                                 </ul>
+                                <div class="pagination-controls"></div>
                             </div>
                         <?php endif;
 
@@ -419,6 +420,44 @@ if (($scan['risk_score'] ?? 0) >= 50) {
                                         </li>
                                     <?php endforeach; ?>
                                 </ul>
+                            </div>
+                        <?php endif;
+
+                        // VirusTotal URL results
+                        if (!empty($details['results'])): ?>
+                            <div class="detail-item">
+                                <strong>VirusTotal Scans (<?= count($details['results']) ?>):</strong>
+                                <ul class="vt-results-list" data-paginate="20">
+                                    <?php foreach ($details['results'] as $vtEntry): ?>
+                                        <?php
+                                            $malicious = $vtEntry['result']['stats']['malicious'] ?? 0;
+                                            $suspicious = $vtEntry['result']['stats']['suspicious'] ?? 0;
+                                            $detectionRate = $vtEntry['result']['detection_rate'] ?? '0/0';
+                                            $scannedAt = $vtEntry['scanned_at'] ?? '';
+
+                                            $statusClass = 'success';
+                                            $statusText = 'Clean';
+                                            if ($malicious > 0) {
+                                                $statusClass = 'error';
+                                                $statusText = 'Malicious';
+                                            } elseif ($suspicious > 0) {
+                                                $statusClass = 'warning';
+                                                $statusText = 'Suspicious';
+                                            }
+                                        ?>
+                                        <li class="vt-result-item">
+                                            <div class="vt-result-url"><?= $e($vtEntry['url']) ?></div>
+                                            <div class="vt-result-info">
+                                                <span class="badge badge-<?= $statusClass ?>"><?= $e($detectionRate) ?></span>
+                                                <span class="vt-result-status"><?= $e($statusText) ?></span>
+                                                <?php if ($scannedAt): ?>
+                                                    <span class="vt-result-time">(<?= $e($scannedAt) ?>)</span>
+                                                <?php endif; ?>
+                                            </div>
+                                        </li>
+                                    <?php endforeach; ?>
+                                </ul>
+                                <div class="pagination-controls" data-target="vt-results-list"></div>
                             </div>
                         <?php endif;
 
