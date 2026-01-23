@@ -1328,3 +1328,69 @@ main {
         max-width: 200px;
     }
 }
+
+/* VirusTotal Individual URL Scanning */
+.vt-scan-cell {
+    text-align: center;
+    white-space: nowrap;
+}
+
+.btn-vt-scan {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
+    background-color: var(--color-primary);
+    color: white;
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: background-color 0.2s, opacity 0.2s;
+}
+
+.btn-vt-scan:hover:not(:disabled) {
+    background-color: var(--color-primary-dark);
+}
+
+.btn-vt-scan:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.btn-vt-scan.loading {
+    position: relative;
+    padding-right: 2rem;
+}
+
+.btn-vt-scan.loading::after {
+    content: '';
+    position: absolute;
+    right: 0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 0.875rem;
+    height: 0.875rem;
+    border: 2px solid white;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: translateY(-50%) rotate(0deg);
+    }
+    to {
+        transform: translateY(-50%) rotate(360deg);
+    }
+}
+
+.vt-result {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    justify-content: center;
+}
+
+.vt-status {
+    color: var(--color-text-muted);
+    font-size: 0.875rem;
+}

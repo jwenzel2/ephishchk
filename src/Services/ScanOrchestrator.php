@@ -996,4 +996,115 @@ class ScanOrchestrator
     {
         return $this->virusTotal;
     }
+
+    /**
+     * Update individual URL scan in VirusTotal results
+     */
+    public function updateIndividualUrlScan(int $scanId, string $url, array $vtResult): void
+    {
+        $this->logger->info('Updating individual URL scan', ['scan_id' => $scanId, 'url' => $url]);
+
+        try {
+            // Get existing virustotal_url result
+            $results = $this->resultModel->getByScanId($scanId);
+            $vtUrlResult = null;
+            $vtUrlResultId = null;
+
+            foreach ($results as $result) {
+                if ($result['check_type'] === 'virustotal_url') {
+                    $vtUrlResult = $result;
+                    $vtUrlResultId = $result['id'];
+                    break;
+                }
+            }
+
+            // Prepare new URL entry
+            $newEntry = [
+                'url' => $url,
+                'result' => $vtResult,
+                'scanned_individually' => true,
+                'scanned_at' => date('Y-m-d H:i:s'),
+            ];
+
+            $existingResults = [];
+            $urlFound = false;
+
+            if ($vtUrlResult && !empty($vtUrlResult['details']['results'])) {
+                $existingResults = $vtUrlResult['details']['results'];
+
+                // Update existing entry or add new one
+                foreach ($existingResults as $key => $entry) {
+                    if (($entry['url'] ?? '') === $url) {
+                        $existingResults[$key] = $newEntry;
+                        $urlFound = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!$urlFound) {
+                $existingResults[] = $newEntry;
+            }
+
+            // Count malicious URLs
+            $maliciousCount = 0;
+            foreach ($existingResults as $entry) {
+                if (isset($entry['result']['stats']['malicious']) && $entry['result']['stats']['malicious'] > 0) {
+                    $maliciousCount++;
+                }
+            }
+
+            // Determine status and score
+            $status = $maliciousCount > 0 ? 'fail' : 'pass';
+            $score = $maliciousCount > 0 ? 0 : 100;
+            $summary = "Scanned " . count($existingResults) . " URL(s), $maliciousCount flagged";
+
+            // Update or create result
+            if ($vtUrlResultId) {
+                $this->resultModel->update($vtUrlResultId, [
+                    'status' => $status,
+                    'score' => $score,
+                    'summary' => $summary,
+                    'details' => ['results' => $existingResults],
+                ]);
+            } else {
+                $this->resultModel->create([
+                    'scan_id' => $scanId,
+                    'check_type' => 'virustotal_url',
+                    'status' => $status,
+                    'score' => $score,
+                    'summary' => $summary,
+                    'details' => ['results' => $existingResults],
+                ]);
+            }
+
+            $this->logger->info('Individual URL scan updated', [
+                'scan_id' => $scanId,
+                'url' => $url,
+                'malicious' => $maliciousCount,
+                'total' => count($existingResults),
+            ]);
+        } catch (\Throwable $e) {
+            $this->logger->exception($e, 'Failed to update individual URL scan', ['scan_id' => $scanId, 'url' => $url]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Recalculate risk score for a scan
+     */
+    public function recalculateRiskScore(int $scanId): void
+    {
+        $this->logger->info('Recalculating risk score', ['scan_id' => $scanId]);
+
+        try {
+            $riskScore = $this->calculateRiskScore($scanId);
+            $this->scanModel->update($scanId, ['risk_score' => $riskScore]);
+
+            $this->logger->info('Risk score recalculated', ['scan_id' => $scanId, 'risk_score' => $riskScore]);
+        } catch (\Throwable $e) {
+            $this->logger->exception($e, 'Failed to recalculate risk score', ['scan_id' => $scanId]);
+            throw $e;
+        }
+    }
 }

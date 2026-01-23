@@ -36,6 +36,9 @@ return [
     // View scan result
     ['GET', '/scan/{id}', [ScanController::class, 'show']],
 
+    // Scan individual URL with VirusTotal
+    ['POST', '/scan/{id}/url/virustotal', [ScanController::class, 'scanUrlWithVirusTotal']],
+
     // Scan history
     ['GET', '/history', [HistoryController::class, 'index']],
 

@@ -233,4 +233,94 @@ class ScanController extends BaseController
             'resultsByType' => $resultsByType,
         ]);
     }
+
+    /**
+     * Scan individual URL with VirusTotal
+     */
+    public function scanUrlWithVirusTotal(): Response
+    {
+        // Validate scan ID
+        $scanId = InputSanitizer::positiveInt($this->getParam('id'), 0);
+        if ($scanId === 0) {
+            return $this->json(['error' => 'Invalid scan ID'], 400);
+        }
+
+        // Validate URL from POST body
+        $url = InputSanitizer::string($this->getPost('url', ''));
+        if (empty($url)) {
+            return $this->json(['error' => 'URL is required'], 400);
+        }
+
+        // Validate URL format
+        if (!filter_var($url, FILTER_VALIDATE_URL)) {
+            return $this->json(['error' => 'Invalid URL format'], 400);
+        }
+
+        $orchestrator = new ScanOrchestrator($this->app);
+        $scanModel = $orchestrator->getScanModel();
+        $scan = $scanModel->find($scanId);
+
+        if (!$scan) {
+            return $this->json(['error' => 'Scan not found'], 404);
+        }
+
+        // Authorization check: scan has no user_id (anonymous) OR user owns the scan
+        $scanUserId = $scan['user_id'] ?? null;
+        $currentUserId = $this->getUserId();
+
+        if ($scanUserId !== null && $scanUserId !== $currentUserId) {
+            return $this->json(['error' => 'Unauthorized'], 403);
+        }
+
+        // Check if VirusTotal is configured
+        $vtClient = $orchestrator->getVirusTotalClient();
+        if (!$vtClient || !$vtClient->isConfigured()) {
+            return $this->json(['error' => 'VirusTotal is not configured'], 503);
+        }
+
+        // Check rate limits
+        $rateLimitStatus = $vtClient->getRateLimitStatus();
+        if (!empty($rateLimitStatus['minute']['remaining']) && $rateLimitStatus['minute']['remaining'] <= 0) {
+            $retryAfter = $rateLimitStatus['minute']['retry_after'] ?? 60;
+            return $this->json([
+                'error' => 'Rate limit exceeded',
+                'retry_after' => $retryAfter,
+            ], 429);
+        }
+
+        // Scan URL with VirusTotal
+        $vtResult = $vtClient->getUrlReport($url);
+
+        if (isset($vtResult['error'])) {
+            // Handle rate limit errors
+            if ($vtResult['error'] === 'Rate limit exceeded') {
+                $retryAfter = $vtResult['rate_limit']['minute']['retry_after'] ?? 60;
+                return $this->json([
+                    'error' => 'Rate limit exceeded',
+                    'retry_after' => $retryAfter,
+                ], 429);
+            }
+
+            return $this->json(['error' => $vtResult['error']], 500);
+        }
+
+        // Update scan results with individual URL scan
+        try {
+            $orchestrator->updateIndividualUrlScan($scanId, $url, $vtResult);
+            $orchestrator->recalculateRiskScore($scanId);
+
+            // Get updated scan
+            $updatedScan = $scanModel->find($scanId);
+
+            return $this->json([
+                'success' => true,
+                'url' => $url,
+                'result' => $vtResult,
+                'risk_score' => $updatedScan['risk_score'],
+                'rate_limit' => $rateLimitStatus,
+            ]);
+        } catch (\Throwable $e) {
+            return $this->json(['error' => 'Failed to update scan: ' . $e->getMessage()], 500);
+        }
+    }
 }

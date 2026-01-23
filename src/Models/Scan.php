@@ -68,6 +68,18 @@ class Scan
     }
 
     /**
+     * Update scan fields
+     */
+    public function update(int $id, array $data): bool
+    {
+        if (empty($data)) {
+            return false;
+        }
+
+        return $this->db->update('scans', $data, 'id = ?', [$id]) > 0;
+    }
+
+    /**
      * Get recent scans for history
      */
     public function getRecent(int $limit = 50, int $offset = 0): array

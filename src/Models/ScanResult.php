@@ -39,6 +39,37 @@ class ScanResult
     }
 
     /**
+     * Update a scan result
+     */
+    public function update(int $id, array $data): bool
+    {
+        $updateData = [];
+
+        if (isset($data['status'])) {
+            $updateData['status'] = $data['status'];
+        }
+        if (isset($data['score'])) {
+            $updateData['score'] = $data['score'];
+        }
+        if (isset($data['summary'])) {
+            $updateData['summary'] = $data['summary'];
+        }
+        if (isset($data['details'])) {
+            $details = $data['details'];
+            if (is_array($details)) {
+                $details = json_encode($details, JSON_UNESCAPED_UNICODE);
+            }
+            $updateData['details'] = $details;
+        }
+
+        if (empty($updateData)) {
+            return false;
+        }
+
+        return $this->db->update('scan_results', $updateData, 'id = ?', [$id]) > 0;
+    }
+
+    /**
      * Get results for a scan
      */
     public function getByScanId(int $scanId): array

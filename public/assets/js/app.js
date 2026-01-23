@@ -270,3 +270,146 @@ function initFileUpload() {
         if (uploadText) uploadText.style.display = 'none';
     }
 }
+
+/**
+ * Scan individual URL with VirusTotal
+ */
+async function scanUrlWithVirusTotal(button) {
+    const scanId = button.dataset.scanId;
+    const url = button.dataset.url;
+
+    if (!scanId || !url) {
+        showNotification('Invalid scan parameters', 'error');
+        return;
+    }
+
+    // Update button to loading state
+    button.disabled = true;
+    button.textContent = 'Scanning...';
+    button.classList.add('loading');
+
+    try {
+        const response = await fetch(`/scan/${scanId}/url/virustotal`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: new URLSearchParams({ url })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            // Handle rate limit error
+            if (response.status === 429) {
+                const retryAfter = data.retry_after || 60;
+                showNotification(`Rate limit exceeded. Please wait ${retryAfter} seconds.`, 'error');
+
+                // Re-enable button after cooldown
+                setTimeout(() => {
+                    button.disabled = false;
+                    button.textContent = 'Scan with VT';
+                    button.classList.remove('loading');
+                }, retryAfter * 1000);
+                return;
+            }
+
+            // Handle VT not configured error
+            if (response.status === 503) {
+                showNotification('VirusTotal is not configured', 'error');
+                button.disabled = false;
+                button.textContent = 'Scan with VT';
+                button.classList.remove('loading');
+                return;
+            }
+
+            // Generic error
+            throw new Error(data.error || 'Failed to scan URL');
+        }
+
+        // Success - update UI
+        const result = data.result;
+        const malicious = result.stats?.malicious || 0;
+        const suspicious = result.stats?.suspicious || 0;
+        const detectionRate = result.detection_rate || '0/0';
+
+        let status = 'Clean';
+        let badgeClass = 'success';
+        if (malicious > 0) {
+            status = 'Malicious';
+            badgeClass = 'error';
+        } else if (suspicious > 0) {
+            status = 'Suspicious';
+            badgeClass = 'warning';
+        }
+
+        // Replace button with result badge
+        const resultHtml = `
+            <div class="vt-result">
+                <span class="badge badge-${badgeClass}">${escapeHtml(detectionRate)}</span>
+                <span class="vt-status">${escapeHtml(status)}</span>
+            </div>
+        `;
+        button.parentElement.innerHTML = resultHtml;
+
+        // Update overall risk score
+        updateRiskScore(data.risk_score);
+
+        // Show success notification
+        showNotification('URL scanned successfully', 'success');
+
+    } catch (error) {
+        showNotification(error.message, 'error');
+
+        // Re-enable button
+        button.disabled = false;
+        button.textContent = 'Scan with VT';
+        button.classList.remove('loading');
+    }
+}
+
+/**
+ * Update risk score display
+ */
+function updateRiskScore(newScore) {
+    const scoreElement = document.querySelector('.risk-score .score-value');
+    const levelElement = document.querySelector('.risk-level');
+    const riskScoreContainer = document.querySelector('.risk-score');
+
+    if (!scoreElement) return;
+
+    // Update score value
+    scoreElement.textContent = newScore;
+
+    // Determine risk level and class
+    let riskLevel = 'Low';
+    let riskClass = 'success';
+    if (newScore >= 50) {
+        riskLevel = 'High';
+        riskClass = 'error';
+    } else if (newScore >= 25) {
+        riskLevel = 'Medium';
+        riskClass = 'warning';
+    }
+
+    // Update risk level badge
+    if (levelElement) {
+        levelElement.textContent = `${riskLevel} Risk`;
+        levelElement.className = `risk-level risk-${riskClass}`;
+    }
+
+    // Update risk score container class
+    if (riskScoreContainer) {
+        riskScoreContainer.className = `risk-score risk-${riskClass}`;
+    }
+}
+
+/**
+ * Escape HTML to prevent XSS
+ */
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}

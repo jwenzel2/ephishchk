@@ -168,6 +168,14 @@ if (($scan['risk_score'] ?? 0) >= 50) {
     // Extract all URLs for display
     $allUrls = $resultsByType['links']['details']['links'] ?? [];
     if (!empty($allUrls) && $scan['scan_type'] === 'full'):
+        // Get VirusTotal results
+        $vtResults = $resultsByType['virustotal_url']['details']['results'] ?? [];
+        $vtResultsMap = [];
+        foreach ($vtResults as $vt) {
+            if (isset($vt['url'])) {
+                $vtResultsMap[$vt['url']] = $vt;
+            }
+        }
     ?>
     <div class="urls-section card">
         <h2>All URLs Found (<?= count($allUrls) ?>)</h2>
@@ -181,6 +189,7 @@ if (($scan['risk_score'] ?? 0) >= 50) {
                         <th>Domain</th>
                         <th>Risk</th>
                         <th>Flags</th>
+                        <th>VirusTotal</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -197,6 +206,9 @@ if (($scan['risk_score'] ?? 0) >= 50) {
                         if (!empty($link['has_ip'])) $flags[] = 'IP Address';
                         if (!empty($link['is_data_uri'])) $flags[] = 'Data URI';
                         if (!empty($link['has_encoded_chars'])) $flags[] = 'Encoded Characters';
+
+                        // Check if URL has VT result
+                        $vtResult = $vtResultsMap[$link['url']] ?? null;
                     ?>
                     <tr class="url-row risk-<?= $link['risk_level'] ?? 'low' ?>">
                         <td class="url-cell">
@@ -213,6 +225,37 @@ if (($scan['risk_score'] ?? 0) >= 50) {
                                 <?php endforeach; ?>
                             <?php else: ?>
                                 <span class="no-flags">-</span>
+                            <?php endif; ?>
+                        </td>
+                        <td class="vt-scan-cell">
+                            <?php if ($vtResult && isset($vtResult['scanned_individually'])): ?>
+                                <?php
+                                    $malicious = $vtResult['result']['stats']['malicious'] ?? 0;
+                                    $suspicious = $vtResult['result']['stats']['suspicious'] ?? 0;
+                                    $total = $vtResult['result']['total_vendors'] ?? 0;
+                                    $detectionRate = $vtResult['result']['detection_rate'] ?? '0/0';
+
+                                    $vtStatus = 'Clean';
+                                    $vtBadgeClass = 'success';
+                                    if ($malicious > 0) {
+                                        $vtStatus = 'Malicious';
+                                        $vtBadgeClass = 'error';
+                                    } elseif ($suspicious > 0) {
+                                        $vtStatus = 'Suspicious';
+                                        $vtBadgeClass = 'warning';
+                                    }
+                                ?>
+                                <div class="vt-result">
+                                    <span class="badge badge-<?= $vtBadgeClass ?>"><?= $e($detectionRate) ?></span>
+                                    <span class="vt-status"><?= $e($vtStatus) ?></span>
+                                </div>
+                            <?php else: ?>
+                                <button class="btn btn-sm btn-vt-scan"
+                                        data-scan-id="<?= $scan['id'] ?>"
+                                        data-url="<?= $e($link['url']) ?>"
+                                        onclick="scanUrlWithVirusTotal(this)">
+                                    Scan with VT
+                                </button>
                             <?php endif; ?>
                         </td>
                     </tr>
