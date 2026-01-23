@@ -272,6 +272,35 @@ function initFileUpload() {
 }
 
 /**
+ * Show inline notification below element
+ */
+function showInlineNotification(element, message, type = 'info', duration = 3000) {
+    // Remove any existing inline notification
+    const existingNotif = element.parentElement.querySelector('.inline-notification');
+    if (existingNotif) {
+        existingNotif.remove();
+    }
+
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `inline-notification inline-notification-${type}`;
+    notification.textContent = message;
+
+    // Insert after the element
+    element.parentElement.appendChild(notification);
+
+    // Auto-remove after duration (if duration > 0)
+    if (duration > 0) {
+        setTimeout(() => {
+            notification.style.opacity = '0';
+            setTimeout(() => notification.remove(), 300);
+        }, duration);
+    }
+
+    return notification;
+}
+
+/**
  * Scan individual URL with VirusTotal
  */
 async function scanUrlWithVirusTotal(button) {
@@ -279,8 +308,14 @@ async function scanUrlWithVirusTotal(button) {
     const url = button.dataset.url;
 
     if (!scanId || !url) {
-        showNotification('Invalid scan parameters', 'error');
+        showInlineNotification(button, 'Invalid scan parameters', 'error');
         return;
+    }
+
+    // Remove any existing notification
+    const existingNotif = button.parentElement.querySelector('.inline-notification');
+    if (existingNotif) {
+        existingNotif.remove();
     }
 
     // Update button to loading state
@@ -304,23 +339,26 @@ async function scanUrlWithVirusTotal(button) {
             // Handle rate limit error
             if (response.status === 429) {
                 const retryAfter = data.retry_after || 60;
-                showNotification(`Rate limit exceeded. Please wait ${retryAfter} seconds.`, 'error');
+                button.disabled = false;
+                button.textContent = 'Scan with VT';
+                button.classList.remove('loading');
 
-                // Re-enable button after cooldown
-                setTimeout(() => {
-                    button.disabled = false;
-                    button.textContent = 'Scan with VT';
-                    button.classList.remove('loading');
-                }, retryAfter * 1000);
+                showInlineNotification(
+                    button,
+                    `Rate limit exceeded. Please wait ${retryAfter} seconds before scanning.`,
+                    'warning',
+                    0  // Don't auto-dismiss
+                );
                 return;
             }
 
             // Handle VT not configured error
             if (response.status === 503) {
-                showNotification('VirusTotal is not configured', 'error');
                 button.disabled = false;
                 button.textContent = 'Scan with VT';
                 button.classList.remove('loading');
+
+                showInlineNotification(button, 'VirusTotal is not configured', 'error');
                 return;
             }
 
@@ -351,16 +389,18 @@ async function scanUrlWithVirusTotal(button) {
                 <span class="vt-status">${escapeHtml(status)}</span>
             </div>
         `;
-        button.parentElement.innerHTML = resultHtml;
+        const parentCell = button.parentElement;
+        parentCell.innerHTML = resultHtml;
+
+        // Show success notification under the result
+        const vtResult = parentCell.querySelector('.vt-result');
+        showInlineNotification(vtResult, 'Scan successful!', 'success', 3000);
 
         // Update overall risk score
         updateRiskScore(data.risk_score);
 
-        // Show success notification
-        showNotification('URL scanned successfully', 'success');
-
     } catch (error) {
-        showNotification(error.message, 'error');
+        showInlineNotification(button, error.message, 'error');
 
         // Re-enable button
         button.disabled = false;
