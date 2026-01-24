@@ -120,6 +120,10 @@ class Application
         if ($request->isPost()) {
             $csrf = new CsrfProtection();
             if (!$csrf->validate($request->getPost('_csrf_token', ''))) {
+                // Return JSON for AJAX requests
+                if ($request->isAjax()) {
+                    return Response::json(['error' => 'Invalid CSRF token'], 403);
+                }
                 return Response::error('Invalid CSRF token', 403);
             }
         }

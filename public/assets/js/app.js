@@ -358,19 +358,61 @@ async function scanUrlWithVirusTotal(button) {
     console.log('[VT Scan] Submitting request to /scan/' + scanId + '/url/virustotal');
 
     try {
+        // Get CSRF token from meta tag
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+
+        if (!csrfToken) {
+            console.error('[VT Scan] CSRF token not found');
+            throw new Error('CSRF token not found');
+        }
+
+        console.log('[VT Scan] CSRF token found, length:', csrfToken.length);
+
         const response = await fetch(`/scan/${scanId}/url/virustotal`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
                 'X-Requested-With': 'XMLHttpRequest'
             },
-            body: new URLSearchParams({ url })
+            body: new URLSearchParams({
+                url: url,
+                _csrf_token: csrfToken
+            })
         });
 
-        const data = await response.json();
+        // Parse response
+        let data;
+        const contentType = response.headers.get('content-type');
+        console.log('[VT Scan] Response content-type:', contentType);
+
+        if (contentType && contentType.includes('application/json')) {
+            data = await response.json();
+        } else {
+            // Non-JSON response (probably an error page)
+            const responseText = await response.text();
+            console.error('[VT Scan] Non-JSON response received:', responseText.substring(0, 500));
+            throw new Error('Server returned invalid response. Please refresh the page and try again.');
+        }
 
         if (!response.ok) {
             console.log('[VT Scan] Request failed with status:', response.status);
+            console.log('[VT Scan] Error data:', data);
+
+            // Handle CSRF token error
+            if (response.status === 403 && data.error?.includes('CSRF')) {
+                console.error('[VT Scan] CSRF token validation failed');
+                button.disabled = false;
+                button.textContent = 'Scan with VT';
+                button.classList.remove('loading');
+
+                showInlineNotification(
+                    button,
+                    '❌ Security Error\nPlease refresh the page and try again.',
+                    'error',
+                    0
+                );
+                return;
+            }
 
             // Handle rate limit error
             if (response.status === 429) {

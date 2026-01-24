@@ -7,6 +7,7 @@ $e = fn($v) => OutputEncoder::html($v);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="<?= $csrfToken ?? '' ?>">
     <title><?= $e($title ?? 'ephishchk') ?> - Email Phishing Checker</title>
     <link rel="stylesheet" href="/assets/css/style.css">
 </head>
