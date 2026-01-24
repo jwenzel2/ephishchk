@@ -385,16 +385,23 @@ async function scanUrlWithVirusTotal(button) {
             console.warn('[VT Scan] CSRF token length is unexpected:', csrfToken.length, 'expected 64');
         }
 
+        // Build request body explicitly
+        const formData = new URLSearchParams();
+        formData.append('url', url);
+        formData.append('_csrf_token', csrfToken);
+
+        const bodyString = formData.toString();
+        console.log('[VT Scan] Request body string:', bodyString);
+        console.log('[VT Scan] Body includes _csrf_token?', bodyString.includes('_csrf_token'));
+        console.log('[VT Scan] Token in body:', bodyString.match(/_csrf_token=([^&]*)/)?.[1]?.substring(0, 16));
+
         const response = await fetch(`/scan/${scanId}/url/virustotal`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
                 'X-Requested-With': 'XMLHttpRequest'
             },
-            body: new URLSearchParams({
-                url: url,
-                _csrf_token: csrfToken
-            })
+            body: formData
         });
 
         // Parse response
