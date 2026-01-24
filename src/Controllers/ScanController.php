@@ -301,6 +301,30 @@ class ScanController extends BaseController
                 ], 429);
             }
 
+            // Handle URL not found - submit it for scanning
+            if ($vtResult['error'] === 'URL not found in VirusTotal database') {
+                // Try to submit the URL for scanning
+                $submitResult = $vtClient->scanUrl($url);
+
+                if (isset($submitResult['success'])) {
+                    // URL submitted successfully
+                    return $this->json([
+                        'not_found' => true,
+                        'submitted' => true,
+                        'message' => 'URL not previously scanned. Submitted to VirusTotal for analysis.',
+                        'analysis_id' => $submitResult['analysis_id'] ?? null,
+                    ], 202); // 202 Accepted
+                } else {
+                    // Submission failed
+                    return $this->json([
+                        'not_found' => true,
+                        'submitted' => false,
+                        'message' => 'URL not found in VirusTotal database. Could not submit for scanning.',
+                        'error' => $submitResult['error'] ?? 'Unknown error',
+                    ], 404);
+                }
+            }
+
             return $this->json(['error' => $vtResult['error']], 500);
         }
 

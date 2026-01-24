@@ -418,6 +418,40 @@ async function scanUrlWithVirusTotal(button) {
             throw new Error('Server returned invalid response. Please refresh the page and try again.');
         }
 
+        // Handle "URL not found" (202 Accepted - submitted for scanning)
+        if (response.status === 202 && data.not_found) {
+            console.log('[VT Scan] URL not found, submitted for analysis');
+
+            button.disabled = false;
+            button.textContent = 'Scan with VT';
+            button.classList.remove('loading');
+
+            showInlineNotification(
+                button,
+                '📝 URL Not Previously Scanned\nSubmitted to VirusTotal for analysis.\nResults will be available later.',
+                'info',
+                10000  // Show for 10 seconds
+            );
+            return;
+        }
+
+        // Handle "URL not found" (404 - not found and couldn't submit)
+        if (response.status === 404 && data.not_found) {
+            console.log('[VT Scan] URL not found and could not submit');
+
+            button.disabled = false;
+            button.textContent = 'Scan with VT';
+            button.classList.remove('loading');
+
+            showInlineNotification(
+                button,
+                'ℹ️ URL Not in VirusTotal Database\nThis URL has not been scanned before.\nLikely a new or rarely-visited URL.',
+                'info',
+                10000
+            );
+            return;
+        }
+
         if (!response.ok) {
             console.log('[VT Scan] Request failed with status:', response.status);
             console.log('[VT Scan] Error data:', data);
