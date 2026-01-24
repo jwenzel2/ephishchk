@@ -119,13 +119,32 @@ class Application
         // CSRF protection for POST requests
         if ($request->isPost()) {
             $csrf = new CsrfProtection();
-            if (!$csrf->validate($request->getPost('_csrf_token', ''))) {
+            $submittedToken = $request->getPost('_csrf_token', '');
+            $expectedToken = $csrf->getToken();
+
+            // Debug logging for CSRF (remove in production)
+            error_log('[CSRF Debug] Submitted token: ' . substr($submittedToken, 0, 16) . '... (length: ' . strlen($submittedToken) . ')');
+            error_log('[CSRF Debug] Expected token: ' . substr($expectedToken, 0, 16) . '... (length: ' . strlen($expectedToken) . ')');
+            error_log('[CSRF Debug] Match: ' . ($submittedToken === $expectedToken ? 'YES' : 'NO'));
+
+            if (!$csrf->validate($submittedToken)) {
+                error_log('[CSRF Debug] CSRF validation failed for ' . $request->getMethod() . ' ' . $request->getUri());
                 // Return JSON for AJAX requests
                 if ($request->isAjax()) {
-                    return Response::json(['error' => 'Invalid CSRF token'], 403);
+                    return Response::json([
+                        'error' => 'Invalid CSRF token',
+                        'debug' => [
+                            'submitted_length' => strlen($submittedToken),
+                            'expected_length' => strlen($expectedToken),
+                            'submitted_preview' => substr($submittedToken, 0, 8),
+                            'expected_preview' => substr($expectedToken, 0, 8),
+                        ]
+                    ], 403);
                 }
                 return Response::error('Invalid CSRF token', 403);
             }
+
+            error_log('[CSRF Debug] CSRF validation succeeded');
         }
 
         // Call controller method

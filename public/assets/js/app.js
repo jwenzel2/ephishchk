@@ -14,6 +14,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Initialize pagination for all lists
     initPagination();
+
+    // Debug: Check CSRF token on page load
+    const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+    if (csrfMeta) {
+        console.log('[Page Load] CSRF meta tag found');
+        console.log('[Page Load] CSRF token:', csrfMeta.content?.substring(0, 16) + '... (length: ' + (csrfMeta.content?.length || 0) + ')');
+    } else {
+        console.error('[Page Load] CSRF meta tag NOT FOUND!');
+    }
 });
 
 /**
@@ -359,14 +368,22 @@ async function scanUrlWithVirusTotal(button) {
 
     try {
         // Get CSRF token from meta tag
-        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+        const csrfTokenMeta = document.querySelector('meta[name="csrf-token"]');
+        const csrfToken = csrfTokenMeta?.content || '';
+
+        console.log('[VT Scan] Meta tag element:', csrfTokenMeta);
+        console.log('[VT Scan] CSRF token value:', csrfToken);
+        console.log('[VT Scan] CSRF token length:', csrfToken.length);
 
         if (!csrfToken) {
-            console.error('[VT Scan] CSRF token not found');
+            console.error('[VT Scan] CSRF token not found in meta tag');
+            alert('CSRF token not found. Please refresh the page.');
             throw new Error('CSRF token not found');
         }
 
-        console.log('[VT Scan] CSRF token found, length:', csrfToken.length);
+        if (csrfToken.length !== 64) {
+            console.warn('[VT Scan] CSRF token length is unexpected:', csrfToken.length, 'expected 64');
+        }
 
         const response = await fetch(`/scan/${scanId}/url/virustotal`, {
             method: 'POST',
@@ -401,13 +418,20 @@ async function scanUrlWithVirusTotal(button) {
             // Handle CSRF token error
             if (response.status === 403 && data.error?.includes('CSRF')) {
                 console.error('[VT Scan] CSRF token validation failed');
+                console.error('[VT Scan] Debug info:', data.debug);
+
                 button.disabled = false;
                 button.textContent = 'Scan with VT';
                 button.classList.remove('loading');
 
+                let errorMsg = '❌ CSRF Token Error\nPlease refresh the page and try again.';
+                if (data.debug) {
+                    errorMsg += `\n\nDebug:\nSent: ${data.debug.submitted_length} chars (${data.debug.submitted_preview}...)\nExpected: ${data.debug.expected_length} chars (${data.debug.expected_preview}...)`;
+                }
+
                 showInlineNotification(
                     button,
-                    '❌ Security Error\nPlease refresh the page and try again.',
+                    errorMsg,
                     'error',
                     0
                 );
