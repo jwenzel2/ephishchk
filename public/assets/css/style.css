@@ -1405,36 +1405,40 @@ main {
 /* Inline Notifications (below VT buttons) */
 .inline-notification {
     margin-top: 0.5rem;
-    padding: 0.5rem 0.75rem;
-    border-radius: var(--radius-sm);
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius);
     font-size: 0.875rem;
     text-align: center;
     transition: opacity 0.3s ease;
     opacity: 1;
+    font-weight: 500;
+    white-space: pre-line;
+    box-shadow: var(--shadow);
+    min-width: 200px;
 }
 
 .inline-notification-success {
     background-color: #d1fae5;
     color: #065f46;
-    border: 1px solid #10b981;
+    border: 2px solid #10b981;
 }
 
 .inline-notification-error {
     background-color: #fee2e2;
     color: #991b1b;
-    border: 1px solid #ef4444;
+    border: 2px solid #ef4444;
 }
 
 .inline-notification-warning {
     background-color: #fef3c7;
     color: #92400e;
-    border: 1px solid #f59e0b;
+    border: 2px solid #f59e0b;
 }
 
 .inline-notification-info {
     background-color: #dbeafe;
     color: #1e40af;
-    border: 1px solid #3b82f6;
+    border: 2px solid #3b82f6;
 }
 
 /* Pagination Controls */

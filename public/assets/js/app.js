@@ -278,13 +278,19 @@ function initFileUpload() {
  * Show inline notification below element
  */
 function showInlineNotification(element, message, type = 'info', duration = 3000) {
+    console.log('[Notification] Showing:', type, '-', message);
+
     // Find the container (vt-cell-container)
     const container = element.closest('.vt-cell-container');
-    if (!container) return null;
+    if (!container) {
+        console.error('[Notification] Could not find vt-cell-container for element:', element);
+        return null;
+    }
 
     // Remove any existing inline notification
     const existingNotif = container.querySelector('.inline-notification');
     if (existingNotif) {
+        console.log('[Notification] Removing existing notification');
         existingNotif.remove();
     }
 
@@ -295,13 +301,19 @@ function showInlineNotification(element, message, type = 'info', duration = 3000
 
     // Append to container
     container.appendChild(notification);
+    console.log('[Notification] Notification added to container');
 
     // Auto-remove after duration (if duration > 0)
     if (duration > 0) {
         setTimeout(() => {
             notification.style.opacity = '0';
-            setTimeout(() => notification.remove(), 300);
+            setTimeout(() => {
+                notification.remove();
+                console.log('[Notification] Notification auto-removed after', duration, 'ms');
+            }, 300);
         }, duration);
+    } else {
+        console.log('[Notification] Notification will persist (duration = 0)');
     }
 
     return notification;
@@ -314,24 +326,36 @@ async function scanUrlWithVirusTotal(button) {
     const scanId = button.dataset.scanId;
     const url = button.dataset.url;
 
+    console.log('[VT Scan] Button clicked for URL:', url);
+
     if (!scanId || !url) {
         showInlineNotification(button, 'Invalid scan parameters', 'error');
+        console.error('[VT Scan] Invalid parameters - scanId:', scanId, 'url:', url);
         return;
     }
 
     // Find container and remove any existing notification
     const container = button.closest('.vt-cell-container');
-    if (!container) return;
+    if (!container) {
+        console.error('[VT Scan] Could not find vt-cell-container');
+        alert('Error: Could not find button container');
+        return;
+    }
 
     const existingNotif = container.querySelector('.inline-notification');
     if (existingNotif) {
         existingNotif.remove();
     }
 
+    // Add initial "Submitting..." notification
+    showInlineNotification(button, 'Submitting URL to VirusTotal...', 'info', 0);
+
     // Update button to loading state
     button.disabled = true;
     button.textContent = 'Scanning...';
     button.classList.add('loading');
+
+    console.log('[VT Scan] Submitting request to /scan/' + scanId + '/url/virustotal');
 
     try {
         const response = await fetch(`/scan/${scanId}/url/virustotal`, {
@@ -346,16 +370,21 @@ async function scanUrlWithVirusTotal(button) {
         const data = await response.json();
 
         if (!response.ok) {
+            console.log('[VT Scan] Request failed with status:', response.status);
+
             // Handle rate limit error
             if (response.status === 429) {
                 const retryAfter = data.retry_after || 60;
+                console.log('[VT Scan] Rate limit exceeded. Retry after:', retryAfter);
+
                 button.disabled = false;
                 button.textContent = 'Scan with VT';
                 button.classList.remove('loading');
 
+                const message = `⚠️ Rate Limit Exceeded\nPlease wait ${retryAfter} seconds before scanning.\nVirusTotal free tier: 4 requests/minute`;
                 showInlineNotification(
                     button,
-                    `Rate limit exceeded. Please wait ${retryAfter} seconds before scanning.`,
+                    message,
                     'warning',
                     0  // Don't auto-dismiss
                 );
@@ -364,19 +393,24 @@ async function scanUrlWithVirusTotal(button) {
 
             // Handle VT not configured error
             if (response.status === 503) {
+                console.log('[VT Scan] VirusTotal not configured');
+
                 button.disabled = false;
                 button.textContent = 'Scan with VT';
                 button.classList.remove('loading');
 
-                showInlineNotification(button, 'VirusTotal is not configured', 'error');
+                showInlineNotification(button, '❌ VirusTotal is not configured', 'error');
                 return;
             }
 
             // Generic error
+            console.error('[VT Scan] Error:', data.error);
             throw new Error(data.error || 'Failed to scan URL');
         }
 
         // Success - update UI
+        console.log('[VT Scan] Success! Response:', data);
+
         const result = data.result;
         const malicious = result.stats?.malicious || 0;
         const suspicious = result.stats?.suspicious || 0;
@@ -384,13 +418,18 @@ async function scanUrlWithVirusTotal(button) {
 
         let status = 'Clean';
         let badgeClass = 'success';
+        let statusIcon = '✓';
         if (malicious > 0) {
             status = 'Malicious';
             badgeClass = 'error';
+            statusIcon = '⚠️';
         } else if (suspicious > 0) {
             status = 'Suspicious';
             badgeClass = 'warning';
+            statusIcon = '⚠';
         }
+
+        console.log('[VT Scan] Detection:', detectionRate, '- Status:', status);
 
         // Replace button with result badge
         const resultHtml = `
@@ -403,13 +442,17 @@ async function scanUrlWithVirusTotal(button) {
 
         // Show success notification under the result
         const vtResult = container.querySelector('.vt-result');
-        showInlineNotification(vtResult, 'Scan successful!', 'success', 3000);
+        const successMsg = `${statusIcon} Scan Complete: ${status} (${detectionRate})`;
+        showInlineNotification(vtResult, successMsg, badgeClass === 'error' ? 'error' : 'success', 5000);
 
         // Update overall risk score
         updateRiskScore(data.risk_score);
 
+        console.log('[VT Scan] Updated risk score to:', data.risk_score);
+
     } catch (error) {
-        showInlineNotification(button, error.message, 'error');
+        console.error('[VT Scan] Exception:', error);
+        showInlineNotification(button, '❌ Error: ' + error.message, 'error', 0);
 
         // Re-enable button
         button.disabled = false;
