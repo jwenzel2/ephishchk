@@ -549,8 +549,26 @@ async function scanUrlWithVirusTotal(button) {
 
         // Show success notification under the result
         const vtResult = container.querySelector('.vt-result');
-        const successMsg = `${statusIcon} Scan Complete: ${status} (${detectionRate})`;
+        let successMsg = `${statusIcon} Scan Complete: ${status} (${detectionRate})`;
+
+        // Add info about risk level change
+        if (data.link_data) {
+            const riskLevel = data.link_data.risk_level;
+            if (riskLevel === 'low') {
+                successMsg += '\n✓ URL Risk: Low (Clean)';
+            } else if (riskLevel === 'high') {
+                successMsg += '\n⚠️ URL Risk: High (Malicious)';
+            } else if (riskLevel === 'medium') {
+                successMsg += '\n⚠ URL Risk: Medium (Suspicious)';
+            }
+        }
+
         showInlineNotification(vtResult, successMsg, badgeClass === 'error' ? 'error' : 'success', 5000);
+
+        // Update the URL row's risk badge if we have updated link data
+        if (data.link_data) {
+            updateUrlRiskBadge(url, data.link_data.risk_level);
+        }
 
         // Update overall risk score
         updateRiskScore(data.risk_score);
@@ -565,6 +583,51 @@ async function scanUrlWithVirusTotal(button) {
         button.disabled = false;
         button.textContent = 'Scan with VT';
         button.classList.remove('loading');
+    }
+}
+
+/**
+ * Update URL row's risk badge based on new risk level
+ */
+function updateUrlRiskBadge(url, newRiskLevel) {
+    console.log('[UI Update] Updating risk badge for URL:', url, 'to:', newRiskLevel);
+
+    // Find all URL table rows
+    const urlRows = document.querySelectorAll('.url-row');
+
+    for (const row of urlRows) {
+        const urlCell = row.querySelector('.url-text');
+        if (urlCell && urlCell.textContent === url) {
+            console.log('[UI Update] Found matching URL row');
+
+            // Update row risk class
+            row.className = row.className.replace(/risk-(low|medium|high)/, `risk-${newRiskLevel}`);
+
+            // Update risk badge
+            const riskCell = row.querySelector('.risk-cell');
+            if (riskCell) {
+                const badge = riskCell.querySelector('.badge');
+                if (badge) {
+                    // Remove old badge class
+                    badge.className = badge.className.replace(/badge-(success|warning|error)/, '');
+
+                    // Add new badge class
+                    let badgeClass = 'success';
+                    if (newRiskLevel === 'high') {
+                        badgeClass = 'error';
+                    } else if (newRiskLevel === 'medium') {
+                        badgeClass = 'warning';
+                    }
+
+                    badge.classList.add(`badge-${badgeClass}`);
+                    badge.textContent = newRiskLevel.charAt(0).toUpperCase() + newRiskLevel.slice(1);
+
+                    console.log('[UI Update] Risk badge updated to:', newRiskLevel, 'with class:', badgeClass);
+                }
+            }
+
+            break;
+        }
     }
 }
 

@@ -333,14 +333,28 @@ class ScanController extends BaseController
             $orchestrator->updateIndividualUrlScan($scanId, $url, $vtResult);
             $orchestrator->recalculateRiskScore($scanId);
 
-            // Get updated scan
-            $updatedScan = $scanModel->find($scanId);
+            // Get updated scan with results
+            $updatedScan = $scanModel->findWithResults($scanId);
+
+            // Find the updated link data
+            $updatedLinkData = null;
+            foreach ($updatedScan['results'] as $result) {
+                if ($result['check_type'] === 'links' && !empty($result['details']['links'])) {
+                    foreach ($result['details']['links'] as $link) {
+                        if ($link['url'] === $url) {
+                            $updatedLinkData = $link;
+                            break 2;
+                        }
+                    }
+                }
+            }
 
             return $this->json([
                 'success' => true,
                 'url' => $url,
                 'result' => $vtResult,
                 'risk_score' => $updatedScan['risk_score'],
+                'link_data' => $updatedLinkData, // Include updated link risk level
                 'rate_limit' => $rateLimitStatus,
             ]);
         } catch (\Throwable $e) {

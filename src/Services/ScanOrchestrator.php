@@ -1078,6 +1078,9 @@ class ScanOrchestrator
                 ]);
             }
 
+            // Also update the individual URL's risk level in the links result
+            $this->updateLinkRiskLevel($scanId, $url, $vtResult);
+
             $this->logger->info('Individual URL scan updated', [
                 'scan_id' => $scanId,
                 'url' => $url,
@@ -1087,6 +1090,105 @@ class ScanOrchestrator
         } catch (\Throwable $e) {
             $this->logger->exception($e, 'Failed to update individual URL scan', ['scan_id' => $scanId, 'url' => $url]);
             throw $e;
+        }
+    }
+
+    /**
+     * Update individual link's risk level based on VirusTotal results
+     */
+    private function updateLinkRiskLevel(int $scanId, string $url, array $vtResult): void
+    {
+        try {
+            // Get the links result
+            $results = $this->resultModel->getByScanId($scanId);
+            $linksResult = null;
+            $linksResultId = null;
+
+            foreach ($results as $result) {
+                if ($result['check_type'] === 'links') {
+                    $linksResult = $result;
+                    $linksResultId = $result['id'];
+                    break;
+                }
+            }
+
+            if (!$linksResult || empty($linksResult['details']['links'])) {
+                $this->logger->warning('No links result found to update', ['scan_id' => $scanId]);
+                return;
+            }
+
+            // Update the specific link's risk level
+            $links = $linksResult['details']['links'];
+            $linkUpdated = false;
+
+            foreach ($links as $key => $link) {
+                if ($link['url'] === $url) {
+                    $malicious = $vtResult['stats']['malicious'] ?? 0;
+                    $suspicious = $vtResult['stats']['suspicious'] ?? 0;
+
+                    // Determine new risk level based on VT results
+                    if ($malicious > 0) {
+                        $links[$key]['risk_level'] = 'high';
+                        $links[$key]['score'] = 100; // Maximum risk score
+                    } elseif ($suspicious > 0) {
+                        $links[$key]['risk_level'] = 'medium';
+                        $links[$key]['score'] = 50;
+                    } else {
+                        // Clean
+                        $links[$key]['risk_level'] = 'low';
+                        $links[$key]['score'] = 0; // Minimal risk
+                    }
+
+                    $links[$key]['vt_scanned'] = true;
+                    $linkUpdated = true;
+                    $this->logger->info('Link risk level updated', [
+                        'url' => $url,
+                        'new_risk_level' => $links[$key]['risk_level'],
+                        'malicious' => $malicious,
+                        'suspicious' => $suspicious,
+                    ]);
+                    break;
+                }
+            }
+
+            if ($linkUpdated) {
+                // Recalculate summary stats
+                $suspiciousCount = 0;
+                $maxScore = 0;
+
+                foreach ($links as $link) {
+                    if ($link['score'] > $maxScore) {
+                        $maxScore = $link['score'];
+                    }
+                    if ($link['score'] >= 25) {
+                        $suspiciousCount++;
+                    }
+                }
+
+                $status = 'pass';
+                if ($maxScore >= 50) {
+                    $status = 'fail';
+                } elseif ($maxScore >= 25) {
+                    $status = 'warning';
+                }
+
+                // Update the links result
+                $this->resultModel->update($linksResultId, [
+                    'status' => $status,
+                    'score' => 100 - $maxScore,
+                    'summary' => count($links) . ' link(s) found, ' . $suspiciousCount . ' suspicious',
+                    'details' => array_merge($linksResult['details'], ['links' => $links]),
+                ]);
+
+                $this->logger->info('Links result updated', [
+                    'scan_id' => $scanId,
+                    'max_score' => $maxScore,
+                    'suspicious_count' => $suspiciousCount,
+                ]);
+            }
+        } catch (\Throwable $e) {
+            $this->logger->exception($e, 'Failed to update link risk level', ['scan_id' => $scanId, 'url' => $url]);
+            // Don't throw - this is not critical enough to fail the whole operation
         }
     }
 
