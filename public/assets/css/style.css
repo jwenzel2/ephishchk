@@ -1080,6 +1080,24 @@ main {
     background: #fef3c7;
 }
 
+/* Dark mode: Use dark text on colored backgrounds for readability */
+[data-theme="dark"] .url-row.risk-high,
+[data-theme="dark"] .url-row.risk-medium {
+    color: #1e293b;
+}
+
+[data-theme="dark"] .url-row.risk-high a,
+[data-theme="dark"] .url-row.risk-medium a {
+    color: #1e40af;
+}
+
+[data-theme="dark"] .link-item.risk-high,
+[data-theme="dark"] .link-item.risk-medium,
+[data-theme="dark"] .attachment-item.risk-high,
+[data-theme="dark"] .attachment-item.risk-medium {
+    color: #1e293b;
+}
+
 .url-cell {
     max-width: 400px;
 }
