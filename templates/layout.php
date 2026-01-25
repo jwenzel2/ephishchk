@@ -1,9 +1,20 @@
 <?php
 use Ephishchk\Security\OutputEncoder;
 $e = fn($v) => OutputEncoder::html($v);
+
+// Determine theme to apply
+$theme = $userPreferences['theme'] ?? 'light';
+$themeAttr = '';
+
+if ($theme === 'dark') {
+    $themeAttr = ' data-theme="dark"';
+} elseif ($theme === 'auto') {
+    // Auto theme will be handled by JavaScript based on system preference
+    $themeAttr = ' data-theme="auto"';
+}
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en"<?= $themeAttr ?>>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">

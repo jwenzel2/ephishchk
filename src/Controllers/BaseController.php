@@ -11,6 +11,7 @@ use Ephishchk\Security\CsrfProtection;
 use Ephishchk\Security\OutputEncoder;
 use Ephishchk\Services\AuthService;
 use Ephishchk\Models\User;
+use Ephishchk\Models\UserPreference;
 
 /**
  * Base Controller
@@ -110,6 +111,14 @@ abstract class BaseController
         $data['csrfToken'] = $this->csrf->getToken();
         $data['csrfField'] = $this->csrf->getHiddenField();
         $data['currentUser'] = $this->getUser();
+
+        // Load user preferences if logged in
+        if ($this->getUserId()) {
+            $prefModel = new UserPreference($this->app->getDatabase());
+            $data['userPreferences'] = $prefModel->getAll($this->getUserId());
+        } else {
+            $data['userPreferences'] = [];
+        }
 
         $content = $this->app->render($template, $data);
         return Response::html($content);

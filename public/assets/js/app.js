@@ -15,6 +15,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize pagination for all lists
     initPagination();
 
+    // Apply auto theme if needed
+    applyAutoTheme();
+
     // Debug: Check CSRF token on page load
     const csrfMeta = document.querySelector('meta[name="csrf-token"]');
     if (csrfMeta) {
@@ -760,5 +763,35 @@ function changePage(button, delta) {
     if (list && list._paginationData) {
         const newPage = list._paginationData.currentPage + delta;
         list._paginationData.showPage(newPage);
+    }
+}
+
+/**
+ * Apply auto theme based on system preference
+ */
+function applyAutoTheme() {
+    const html = document.documentElement;
+    const currentTheme = html.getAttribute('data-theme');
+
+    // Only apply if theme is set to "auto"
+    if (currentTheme === 'auto') {
+        // Check system preference
+        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+        if (prefersDark) {
+            html.setAttribute('data-theme', 'dark');
+        } else {
+            html.setAttribute('data-theme', 'light');
+        }
+
+        // Listen for changes to system preference
+        if (window.matchMedia) {
+            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+                // Only update if still in auto mode
+                if (html.getAttribute('data-theme') === 'auto' || html.getAttribute('data-theme') === 'dark' || html.getAttribute('data-theme') === 'light') {
+                    html.setAttribute('data-theme', e.matches ? 'dark' : 'light');
+                }
+            });
+        }
     }
 }
