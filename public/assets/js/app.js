@@ -795,3 +795,95 @@ function applyAutoTheme() {
         }
     }
 }
+
+/**
+ * Add domain to safe list (admin only)
+ */
+async function addDomainToSafeList(button) {
+    const domain = button.dataset.domain;
+    const url = button.dataset.url;
+
+    console.log('[Safe Domain] Button clicked for domain:', domain);
+
+    if (!domain) {
+        showNotification('Invalid domain', 'error');
+        console.error('[Safe Domain] Invalid domain - domain:', domain);
+        return;
+    }
+
+    // Confirm with user
+    if (!confirm(`Add "${domain}" to the safe domains list?\n\nThis domain will be used for typosquatting detection.`)) {
+        console.log('[Safe Domain] User canceled');
+        return;
+    }
+
+    // Update button to loading state
+    const originalText = button.textContent;
+    button.disabled = true;
+    button.textContent = 'Adding...';
+
+    console.log('[Safe Domain] Submitting request to /admin/safe-domains/add-from-scan');
+
+    try {
+        // Get CSRF token from meta tag
+        const csrfTokenMeta = document.querySelector('meta[name="csrf-token"]');
+        const csrfToken = csrfTokenMeta?.content || '';
+
+        if (!csrfToken) {
+            console.error('[Safe Domain] CSRF token not found in meta tag');
+            throw new Error('CSRF token not found. Please refresh the page.');
+        }
+
+        // Build request body
+        const formData = new URLSearchParams();
+        formData.append('domain', domain);
+        formData.append('_csrf_token', csrfToken);
+
+        const response = await fetch('/admin/safe-domains/add-from-scan', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: formData
+        });
+
+        // Parse response
+        let data;
+        const contentType = response.headers.get('content-type');
+        console.log('[Safe Domain] Response content-type:', contentType);
+
+        if (contentType && contentType.includes('application/json')) {
+            data = await response.json();
+        } else {
+            const responseText = await response.text();
+            console.error('[Safe Domain] Non-JSON response received:', responseText.substring(0, 500));
+            throw new Error('Server returned invalid response. Please refresh the page and try again.');
+        }
+
+        if (!response.ok) {
+            console.log('[Safe Domain] Request failed with status:', response.status);
+            console.log('[Safe Domain] Error data:', data);
+            throw new Error(data.error || 'Failed to add domain to safe list');
+        }
+
+        // Success
+        console.log('[Safe Domain] Success! Response:', data);
+
+        // Update button to success state
+        button.textContent = '✓ Safe';
+        button.classList.add('btn-safe-added');
+        button.disabled = true;
+
+        // Show success notification
+        showNotification(`Domain "${domain}" added to safe list successfully`, 'success');
+
+    } catch (error) {
+        console.error('[Safe Domain] Exception:', error);
+        showNotification('Error: ' + error.message, 'error');
+
+        // Restore button state
+        button.disabled = false;
+        button.textContent = originalText;
+    }
+}

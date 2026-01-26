@@ -9,6 +9,7 @@ use Ephishchk\Core\Logger;
 use Ephishchk\Models\Scan;
 use Ephishchk\Models\ScanResult;
 use Ephishchk\Models\Setting;
+use Ephishchk\Models\SafeDomain;
 use Ephishchk\Services\Authentication\DnsLookupService;
 use Ephishchk\Services\Authentication\SpfCheckerService;
 use Ephishchk\Services\Authentication\DkimCheckerService;
@@ -32,6 +33,7 @@ class ScanOrchestrator
     private Scan $scanModel;
     private ScanResult $resultModel;
     private Setting $settingModel;
+    private SafeDomain $safeDomainModel;
 
     // Services
     private DnsLookupService $dns;
@@ -62,6 +64,7 @@ class ScanOrchestrator
             $this->scanModel = new Scan($db);
             $this->resultModel = new ScanResult($db);
             $this->settingModel = new Setting($db, $config['encryption_key'] ?? '');
+            $this->safeDomainModel = new SafeDomain($db);
 
             $this->logger->debug('Models initialized');
 
@@ -526,6 +529,11 @@ class ScanOrchestrator
             }
 
             $this->logger->debug('Links found', ['count' => count($links)]);
+
+            // Load safe domains for typosquatting detection
+            $safeDomains = $this->safeDomainModel->getAllDomainStrings();
+            $this->linkAnalyzer->setSafeDomains($safeDomains);
+            $this->logger->debug('Safe domains loaded', ['count' => count($safeDomains)]);
 
             $analyzed = $this->linkAnalyzer->analyzeMultiple($links);
 

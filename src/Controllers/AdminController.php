@@ -6,6 +6,7 @@ namespace Ephishchk\Controllers;
 
 use Ephishchk\Core\Response;
 use Ephishchk\Models\User;
+use Ephishchk\Models\SafeDomain;
 use Ephishchk\Security\InputSanitizer;
 
 /**
@@ -128,5 +129,120 @@ class AdminController extends BaseController
         }
 
         return $this->redirect('/admin/users');
+    }
+
+    /**
+     * Safe Domains Management Page
+     */
+    public function safeDomains(): Response
+    {
+        if ($redirect = $this->requireAdmin()) {
+            return $redirect;
+        }
+
+        $safeDomainModel = new SafeDomain($this->app->getDatabase());
+        $domains = $safeDomainModel->getAll();
+
+        return $this->render('admin/safe-domains', [
+            'title' => 'Safe Domains Management',
+            'domains' => $domains,
+            'total' => count($domains),
+        ]);
+    }
+
+    /**
+     * Add a safe domain (from management page)
+     */
+    public function addSafeDomain(): Response
+    {
+        if ($redirect = $this->requireAdmin()) {
+            return $redirect;
+        }
+
+        $domain = InputSanitizer::string($this->getPost('domain', ''));
+        $notes = InputSanitizer::string($this->getPost('notes', ''));
+
+        if (empty($domain)) {
+            if ($this->isAjax()) {
+                return $this->json(['error' => 'Domain is required'], 400);
+            }
+            return $this->redirect('/admin/safe-domains');
+        }
+
+        $safeDomainModel = new SafeDomain($this->app->getDatabase());
+
+        // Check if domain already exists
+        if ($safeDomainModel->exists($domain)) {
+            if ($this->isAjax()) {
+                return $this->json(['error' => 'Domain already exists in safe list'], 400);
+            }
+            return $this->redirect('/admin/safe-domains');
+        }
+
+        $safeDomainModel->create($domain, $this->getUserId(), $notes);
+
+        if ($this->isAjax()) {
+            return $this->json(['success' => true, 'message' => 'Domain added successfully']);
+        }
+
+        return $this->redirect('/admin/safe-domains');
+    }
+
+    /**
+     * Delete a safe domain
+     */
+    public function deleteSafeDomain(): Response
+    {
+        if ($redirect = $this->requireAdmin()) {
+            return $redirect;
+        }
+
+        $id = InputSanitizer::positiveInt($this->getPost('id'), 0);
+
+        if ($id === 0) {
+            if ($this->isAjax()) {
+                return $this->json(['error' => 'Invalid domain ID'], 400);
+            }
+            return $this->redirect('/admin/safe-domains');
+        }
+
+        $safeDomainModel = new SafeDomain($this->app->getDatabase());
+        $safeDomainModel->delete($id);
+
+        if ($this->isAjax()) {
+            return $this->json(['success' => true, 'message' => 'Domain deleted successfully']);
+        }
+
+        return $this->redirect('/admin/safe-domains');
+    }
+
+    /**
+     * Add domain from scan results (AJAX endpoint)
+     */
+    public function addDomainFromScan(): Response
+    {
+        if ($redirect = $this->requireAdmin()) {
+            return $redirect;
+        }
+
+        $domain = InputSanitizer::string($this->getPost('domain', ''));
+
+        if (empty($domain)) {
+            return $this->json(['error' => 'Domain is required'], 400);
+        }
+
+        $safeDomainModel = new SafeDomain($this->app->getDatabase());
+
+        // Check if domain already exists
+        if ($safeDomainModel->exists($domain)) {
+            return $this->json(['error' => 'Domain already in safe list'], 400);
+        }
+
+        $safeDomainModel->create($domain, $this->getUserId(), 'Added from scan results');
+
+        return $this->json([
+            'success' => true,
+            'message' => 'Domain added to safe list successfully'
+        ]);
     }
 }

@@ -63,4 +63,10 @@ return [
     ['GET', '/admin/users', [AdminController::class, 'users']],
     ['POST', '/admin/users/role', [AdminController::class, 'updateRole']],
     ['POST', '/admin/users/toggle-active', [AdminController::class, 'toggleActive']],
+
+    // Admin - Safe Domains Management
+    ['GET', '/admin/safe-domains', [AdminController::class, 'safeDomains']],
+    ['POST', '/admin/safe-domains/add', [AdminController::class, 'addSafeDomain']],
+    ['POST', '/admin/safe-domains/delete', [AdminController::class, 'deleteSafeDomain']],
+    ['POST', '/admin/safe-domains/add-from-scan', [AdminController::class, 'addDomainFromScan']],
 ];

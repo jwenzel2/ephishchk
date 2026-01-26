@@ -190,6 +190,9 @@ if (($scan['risk_score'] ?? 0) >= 50) {
                         <th>Risk</th>
                         <th>Flags</th>
                         <th>VirusTotal</th>
+                        <?php if (($currentUser['role'] ?? 'user') === 'admin'): ?>
+                        <th>Actions</th>
+                        <?php endif; ?>
                     </tr>
                 </thead>
                 <tbody>
@@ -260,6 +263,16 @@ if (($scan['risk_score'] ?? 0) >= 50) {
                                 <?php endif; ?>
                             </div>
                         </td>
+                        <?php if (($currentUser['role'] ?? 'user') === 'admin'): ?>
+                        <td class="actions-cell">
+                            <button class="btn btn-sm btn-add-safe"
+                                    data-url="<?= $e($link['url']) ?>"
+                                    data-domain="<?= $e($link['domain'] ?? parse_url($link['url'], PHP_URL_HOST) ?? '') ?>"
+                                    onclick="addDomainToSafeList(this)">
+                                + Safe
+                            </button>
+                        </td>
+                        <?php endif; ?>
                     </tr>
                     <?php endforeach; ?>
                 </tbody>
