@@ -27,7 +27,7 @@ class SafeDomain
         $normalizedDomain = $this->normalizeDomain($domain);
 
         // Log normalization result to file AND error_log
-        $debugLog = "/tmp/safe_domain_debug.log";
+        $debugLog = __DIR__ . "/../../storage/logs/safe_domain_debug.log";
         $timestamp = date('Y-m-d H:i:s');
         file_put_contents($debugLog, "[{$timestamp}] create() Input: '{$domain}' -> Normalized: '{$normalizedDomain}'\n", FILE_APPEND);
 
@@ -115,7 +115,7 @@ class SafeDomain
     public function normalizeDomain(string $domain): string
     {
         $original = $domain;
-        $debugLog = "/tmp/safe_domain_debug.log";
+        $debugLog = __DIR__ . "/../../storage/logs/safe_domain_debug.log";
         $timestamp = date('Y-m-d H:i:s');
 
         // Handle empty or null input
