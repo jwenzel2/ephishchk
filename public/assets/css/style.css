@@ -1832,3 +1832,15 @@ main {
     background: rgba(255, 255, 255, 0.1);
     color: #fbbf24;
 }
+
+/* Dark Theme Adjustments for Email Headers */
+[data-theme="dark"] .header-item.header-warning {
+    background: rgba(245, 158, 11, 0.15);
+    border-left-color: var(--color-warning);
+}
+
+[data-theme="dark"] .header-alert {
+    background: var(--color-warning);
+    color: #000000;
+    font-weight: 700;
+}

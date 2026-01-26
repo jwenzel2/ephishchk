@@ -9,6 +9,13 @@ $statusClass = match($scan['status']) {
     default => 'info'
 };
 
+$statusText = match($scan['status']) {
+    'completed' => 'Completed',
+    'failed' => 'Suspicious',
+    'processing' => 'Processing',
+    default => ucfirst($scan['status'])
+};
+
 $riskLevel = 'low';
 $riskClass = 'success';
 if (($scan['risk_score'] ?? 0) >= 50) {
@@ -39,7 +46,7 @@ if (($scan['risk_score'] ?? 0) >= 50) {
             </div>
             <div class="summary-item">
                 <span class="label">Status</span>
-                <span class="value badge badge-<?= $statusClass ?>"><?= $e(ucfirst($scan['status'])) ?></span>
+                <span class="value badge badge-<?= $statusClass ?>"><?= $e($statusText) ?></span>
             </div>
             <div class="summary-item">
                 <span class="label">Date</span>
