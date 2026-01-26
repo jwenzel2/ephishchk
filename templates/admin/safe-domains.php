@@ -43,8 +43,7 @@ $e = fn($v) => OutputEncoder::html($v ?? '');
                        id="domain"
                        name="domain"
                        placeholder="example.com"
-                       required
-                       pattern="^[a-zA-Z0-9][a-zA-Z0-9\-_.]*\.[a-zA-Z]{2,}$">
+                       required>
                 <small class="form-help">Enter domain name only (e.g., "example.com", not "https://example.com")</small>
             </div>
             <div class="form-group">
@@ -127,6 +126,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Normalize domain input on blur (remove protocol, www, etc.)
     domainInput.addEventListener('blur', function() {
         let value = this.value.trim();
+        console.log('[Safe Domain Form] Before normalization:', value);
 
         // Remove protocol
         value = value.replace(/^https?:\/\//i, '');
@@ -141,6 +141,7 @@ document.addEventListener('DOMContentLoaded', function() {
         value = value.replace(/\/.*$/, '');
 
         this.value = value.toLowerCase();
+        console.log('[Safe Domain Form] After normalization:', this.value);
     });
 });
 </script>
