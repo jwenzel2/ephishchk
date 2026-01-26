@@ -44,7 +44,7 @@ $e = fn($v) => OutputEncoder::html($v ?? '');
                        name="domain"
                        placeholder="example.com"
                        required
-                       pattern="^[a-zA-Z0-9][a-zA-Z0-9-_.]*\.[a-zA-Z]{2,}$">
+                       pattern="^[a-zA-Z0-9][a-zA-Z0-9\-_.]*\.[a-zA-Z]{2,}$">
                 <small class="form-help">Enter domain name only (e.g., "example.com", not "https://example.com")</small>
             </div>
             <div class="form-group">
