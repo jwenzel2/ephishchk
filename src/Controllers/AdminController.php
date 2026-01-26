@@ -143,11 +143,21 @@ class AdminController extends BaseController
         $safeDomainModel = new SafeDomain($this->app->getDatabase());
         $domains = $safeDomainModel->getAll();
 
-        return $this->render('admin/safe-domains', [
+        $data = [
             'title' => 'Safe Domains Management',
             'domains' => $domains,
             'total' => count($domains),
-        ]);
+        ];
+
+        // Add error/success messages from query params
+        if ($error = $this->getQuery('error')) {
+            $data['error'] = $error;
+        }
+        if ($success = $this->getQuery('success')) {
+            $data['success'] = $success;
+        }
+
+        return $this->render('admin/safe-domains', $data);
     }
 
     /**
@@ -171,30 +181,29 @@ class AdminController extends BaseController
 
         $safeDomainModel = new SafeDomain($this->app->getDatabase());
 
-        // Normalize and validate domain
-        $normalizedDomain = $safeDomainModel->normalizeDomain($domain);
-        if (empty($normalizedDomain)) {
-            if ($this->isAjax()) {
-                return $this->json(['error' => 'Invalid domain format'], 400);
-            }
-            return $this->redirect('/admin/safe-domains');
-        }
-
-        // Check if domain already exists
+        // Check if domain already exists (exists() will normalize internally)
         if ($safeDomainModel->exists($domain)) {
             if ($this->isAjax()) {
                 return $this->json(['error' => 'Domain already exists in safe list'], 400);
             }
-            return $this->redirect('/admin/safe-domains');
+            return $this->redirect('/admin/safe-domains?error=' . urlencode('Domain already exists'));
         }
 
-        $safeDomainModel->create($domain, $this->getUserId(), $notes);
+        try {
+            $safeDomainModel->create($domain, $this->getUserId(), $notes);
+        } catch (\Exception $e) {
+            error_log("[SafeDomain] Failed to create domain: " . $e->getMessage());
+            if ($this->isAjax()) {
+                return $this->json(['error' => 'Failed to add domain: ' . $e->getMessage()], 500);
+            }
+            return $this->redirect('/admin/safe-domains?error=' . urlencode('Failed to add domain'));
+        }
 
         if ($this->isAjax()) {
             return $this->json(['success' => true, 'message' => 'Domain added successfully']);
         }
 
-        return $this->redirect('/admin/safe-domains');
+        return $this->redirect('/admin/safe-domains?success=' . urlencode('Domain added successfully'));
     }
 
     /**
@@ -236,24 +245,24 @@ class AdminController extends BaseController
 
         $domain = InputSanitizer::string($this->getPost('domain', ''));
 
+        // Log received domain for debugging
+        error_log("[SafeDomain] Received domain from AJAX: '{$domain}'");
+
         if (empty($domain) || trim($domain) === '') {
+            error_log("[SafeDomain] Domain is empty or whitespace");
             return $this->json(['error' => 'Domain is required'], 400);
         }
 
         $safeDomainModel = new SafeDomain($this->app->getDatabase());
 
-        // Normalize and validate domain
-        $normalizedDomain = $safeDomainModel->normalizeDomain($domain);
-        if (empty($normalizedDomain)) {
-            return $this->json(['error' => 'Invalid domain format'], 400);
-        }
-
-        // Check if domain already exists
+        // Check if domain already exists (exists() will normalize internally)
         if ($safeDomainModel->exists($domain)) {
+            error_log("[SafeDomain] Domain already exists: '{$normalizedDomain}'");
             return $this->json(['error' => 'Domain already in safe list'], 400);
         }
 
         $safeDomainModel->create($domain, $this->getUserId(), 'Added from scan results');
+        error_log("[SafeDomain] Successfully added domain: '{$normalizedDomain}'");
 
         return $this->json([
             'success' => true,

@@ -117,16 +117,32 @@ class SafeDomain
         $domain = strtolower($domain);
 
         // Remove protocol
-        $domain = preg_replace('#^https?://#i', '', $domain) ?? '';
+        $result = preg_replace('#^https?://#i', '', $domain);
+        if ($result === null) {
+            return ''; // Regex error
+        }
+        $domain = $result;
 
         // Remove www. prefix
-        $domain = preg_replace('#^www\.#i', '', $domain) ?? '';
+        $result = preg_replace('#^www\.#i', '', $domain);
+        if ($result === null) {
+            return ''; // Regex error
+        }
+        $domain = $result;
 
         // Remove path, query string, and fragment
-        $domain = preg_replace('#[/?#].*$#', '', $domain) ?? '';
+        $result = preg_replace('#[/?#].*$#', '', $domain);
+        if ($result === null) {
+            return ''; // Regex error
+        }
+        $domain = $result;
 
         // Remove port if present
-        $domain = preg_replace('#:\d+$#', '', $domain) ?? '';
+        $result = preg_replace('#:\d+$#', '', $domain);
+        if ($result === null) {
+            return ''; // Regex error
+        }
+        $domain = $result;
 
         return $domain;
     }
