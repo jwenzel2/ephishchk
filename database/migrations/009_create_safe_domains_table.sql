@@ -2,16 +2,20 @@
 -- This table stores trusted domains that will be used to detect potential typosquatting attempts
 
 CREATE TABLE IF NOT EXISTS safe_domains (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     domain VARCHAR(255) NOT NULL UNIQUE,
-    added_by_user_id INTEGER NOT NULL,
-    notes TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (added_by_user_id) REFERENCES users(id) ON DELETE CASCADE
-);
+    added_by_user_id INT UNSIGNED NOT NULL,
+    notes TEXT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-CREATE INDEX idx_safe_domains_domain ON safe_domains(domain);
-CREATE INDEX idx_safe_domains_added_by ON safe_domains(added_by_user_id);
+    INDEX idx_domain (domain),
+    INDEX idx_added_by (added_by_user_id),
+
+    CONSTRAINT fk_safe_domains_user
+        FOREIGN KEY (added_by_user_id)
+        REFERENCES users(id)
+        ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Pre-populate with common legitimate domains that are frequently targeted by typosquatting
 INSERT INTO safe_domains (domain, added_by_user_id, notes) VALUES
