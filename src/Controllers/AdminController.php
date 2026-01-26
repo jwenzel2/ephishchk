@@ -172,7 +172,12 @@ class AdminController extends BaseController
         $domain = InputSanitizer::string($this->getPost('domain', ''));
         $notes = InputSanitizer::string($this->getPost('notes', ''));
 
-        // Debug: log raw input
+        // Debug: log raw input to file AND error_log
+        $debugLog = "/tmp/safe_domain_debug.log";
+        $timestamp = date('Y-m-d H:i:s');
+        file_put_contents($debugLog, "[{$timestamp}] Raw POST domain: '" . ($this->getPost('domain', '') ?? 'NULL') . "'\n", FILE_APPEND);
+        file_put_contents($debugLog, "[{$timestamp}] After sanitizer: '{$domain}' (length: " . strlen($domain) . ")\n", FILE_APPEND);
+
         error_log("[addSafeDomain] Raw POST domain: '" . ($this->getPost('domain', '') ?? 'NULL') . "'");
         error_log("[addSafeDomain] After sanitizer: '{$domain}' (length: " . strlen($domain) . ")");
 

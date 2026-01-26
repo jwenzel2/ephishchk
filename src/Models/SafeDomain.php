@@ -26,11 +26,16 @@ class SafeDomain
     {
         $normalizedDomain = $this->normalizeDomain($domain);
 
-        // Log normalization result
+        // Log normalization result to file AND error_log
+        $debugLog = "/tmp/safe_domain_debug.log";
+        $timestamp = date('Y-m-d H:i:s');
+        file_put_contents($debugLog, "[{$timestamp}] create() Input: '{$domain}' -> Normalized: '{$normalizedDomain}'\n", FILE_APPEND);
+
         error_log("[SafeDomain::create] Input: '{$domain}' -> Normalized: '{$normalizedDomain}'");
 
         // Prevent storing empty domains
         if (empty($normalizedDomain)) {
+            file_put_contents($debugLog, "[{$timestamp}] ERROR: Normalized domain is empty, refusing to store\n", FILE_APPEND);
             error_log("[SafeDomain::create] ERROR: Normalized domain is empty, refusing to store");
             throw new \InvalidArgumentException("Invalid domain: '{$domain}' normalized to empty string");
         }
@@ -110,9 +115,12 @@ class SafeDomain
     public function normalizeDomain(string $domain): string
     {
         $original = $domain;
+        $debugLog = "/tmp/safe_domain_debug.log";
+        $timestamp = date('Y-m-d H:i:s');
 
         // Handle empty or null input
         if (empty($domain)) {
+            file_put_contents($debugLog, "[{$timestamp}] normalizeDomain() Empty input\n", FILE_APPEND);
             error_log("[normalizeDomain] Empty input");
             return '';
         }
@@ -167,6 +175,7 @@ class SafeDomain
         $domain = $result;
         error_log("[normalizeDomain] After port removal: '{$domain}'");
 
+        file_put_contents($debugLog, "[{$timestamp}] normalizeDomain() FINAL: '{$original}' -> '{$domain}'\n", FILE_APPEND);
         error_log("[normalizeDomain] FINAL: '{$original}' -> '{$domain}'");
         return $domain;
     }
