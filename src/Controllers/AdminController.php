@@ -172,6 +172,10 @@ class AdminController extends BaseController
         $domain = InputSanitizer::string($this->getPost('domain', ''));
         $notes = InputSanitizer::string($this->getPost('notes', ''));
 
+        // Debug: log raw input
+        error_log("[addSafeDomain] Raw POST domain: '" . ($this->getPost('domain', '') ?? 'NULL') . "'");
+        error_log("[addSafeDomain] After sanitizer: '{$domain}' (length: " . strlen($domain) . ")");
+
         if (empty($domain) || trim($domain) === '') {
             if ($this->isAjax()) {
                 return $this->json(['error' => 'Domain is required'], 400);
