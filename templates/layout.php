@@ -33,7 +33,8 @@ if ($theme === 'dark') {
                 <li><a href="/preferences" class="<?= str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/preferences') ? 'active' : '' ?>">Preferences</a></li>
                 <?php if (($currentUser['role'] ?? 'user') === 'admin'): ?>
                 <li><a href="/settings" class="<?= str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/settings') ? 'active' : '' ?>">Settings</a></li>
-                <li><a href="/admin/users" class="<?= str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/admin') ? 'active' : '' ?>">Users</a></li>
+                <li><a href="/admin/users" class="<?= str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/admin/users') ? 'active' : '' ?>">Users</a></li>
+                <li><a href="/admin/safe-domains" class="<?= str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/admin/safe-domains') ? 'active' : '' ?>">Safe Domains</a></li>
                 <?php endif; ?>
                 <?php endif; ?>
             </ul>
