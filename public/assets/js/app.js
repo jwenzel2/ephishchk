@@ -858,7 +858,16 @@ async function addDomainToSafeList(button) {
         } else {
             const responseText = await response.text();
             console.error('[Safe Domain] Non-JSON response received:', responseText.substring(0, 500));
-            throw new Error('Server returned invalid response. Please refresh the page and try again.');
+            console.error('[Safe Domain] Full response status:', response.status, response.statusText);
+
+            // Try to provide a more helpful error message
+            if (response.status === 404) {
+                throw new Error('Endpoint not found. Please refresh the page.');
+            } else if (response.status === 500) {
+                throw new Error('Server error occurred. Check console for details.');
+            } else {
+                throw new Error('Server returned invalid response. Please refresh the page and try again.');
+            }
         }
 
         if (!response.ok) {

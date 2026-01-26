@@ -48,6 +48,9 @@ abstract class BaseController
     protected function requireAuth(): ?Response
     {
         if (!$this->auth()->check()) {
+            if ($this->isAjax()) {
+                return $this->json(['error' => 'Authentication required'], 401);
+            }
             return $this->redirect('/login');
         }
         return null;
@@ -63,6 +66,9 @@ abstract class BaseController
         }
 
         if (!$this->isAdmin()) {
+            if ($this->isAjax()) {
+                return $this->json(['error' => 'Admin access required'], 403);
+            }
             return $this->redirect('/');
         }
         return null;
