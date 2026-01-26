@@ -199,6 +199,39 @@ class SafeDomain
     }
 
     /**
+     * Extract the base/root domain (SLD + TLD) from a domain with subdomains
+     * Example: 'go.cloudplatformonline.com' -> 'cloudplatformonline.com'
+     * Example: 'login.google.com' -> 'google.com'
+     * Example: 'google.com' -> 'google.com'
+     * Example: 'subdomain.example.co.uk' -> 'example.co.uk'
+     */
+    public function extractBaseDomain(string $domain): string
+    {
+        $normalized = $this->normalizeDomain($domain);
+        $parts = explode('.', $normalized);
+
+        // List of known two-part TLDs (not comprehensive, but covers common cases)
+        $twoPartTlds = ['co.uk', 'com.au', 'co.nz', 'co.za', 'com.br', 'co.jp'];
+
+        // If only 2 parts (e.g., 'google.com'), return as-is
+        if (count($parts) <= 2) {
+            return $normalized;
+        }
+
+        // Check if it uses a two-part TLD
+        $lastTwoParts = $parts[count($parts) - 2] . '.' . $parts[count($parts) - 1];
+        if (in_array($lastTwoParts, $twoPartTlds)) {
+            // Take last 3 parts (subdomain.example.co.uk -> example.co.uk)
+            if (count($parts) >= 3) {
+                return $parts[count($parts) - 3] . '.' . $parts[count($parts) - 2] . '.' . $parts[count($parts) - 1];
+            }
+        }
+
+        // Default: take last 2 parts (go.cloudplatformonline.com -> cloudplatformonline.com)
+        return $parts[count($parts) - 2] . '.' . $parts[count($parts) - 1];
+    }
+
+    /**
      * Count total safe domains
      */
     public function count(): int

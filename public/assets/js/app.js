@@ -797,25 +797,61 @@ function applyAutoTheme() {
 }
 
 /**
+ * Extract base domain from a domain with subdomains
+ * Example: 'go.cloudplatformonline.com' -> 'cloudplatformonline.com'
+ */
+function extractBaseDomain(domain) {
+    if (!domain) return domain;
+
+    const parts = domain.toLowerCase().split('.');
+
+    // If only 2 parts, return as-is
+    if (parts.length <= 2) {
+        return domain;
+    }
+
+    // Known two-part TLDs
+    const twoPartTlds = ['co.uk', 'com.au', 'co.nz', 'co.za', 'com.br', 'co.jp'];
+    const lastTwoParts = parts[parts.length - 2] + '.' + parts[parts.length - 1];
+
+    if (twoPartTlds.includes(lastTwoParts)) {
+        // Take last 3 parts for two-part TLDs
+        if (parts.length >= 3) {
+            return parts.slice(-3).join('.');
+        }
+    }
+
+    // Default: take last 2 parts
+    return parts.slice(-2).join('.');
+}
+
+/**
  * Add domain to safe list (admin only)
  */
 async function addDomainToSafeList(button) {
-    const domain = button.dataset.domain;
+    const fullDomain = button.dataset.domain;
     const url = button.dataset.url;
 
-    console.log('[Safe Domain] Button clicked for domain:', domain);
+    console.log('[Safe Domain] Button clicked for domain:', fullDomain);
 
-    if (!domain) {
+    if (!fullDomain) {
         showNotification('Invalid domain', 'error');
-        console.error('[Safe Domain] Invalid domain - domain:', domain);
+        console.error('[Safe Domain] Invalid domain - domain:', fullDomain);
         return;
     }
 
-    // Confirm with user
-    if (!confirm(`Add "${domain}" to the safe domains list?\n\nThis domain will be used for typosquatting detection.`)) {
+    // Extract base domain (remove subdomains)
+    const baseDomain = extractBaseDomain(fullDomain);
+    console.log('[Safe Domain] Extracted base domain:', baseDomain);
+
+    // Confirm with user (show base domain that will be added)
+    if (!confirm(`Add "${baseDomain}" to the safe domains list?\n\nThis domain will be used for typosquatting detection.`)) {
         console.log('[Safe Domain] User canceled');
         return;
     }
+
+    // Use the base domain for submission
+    const domain = baseDomain;
 
     // Update button to loading state
     const originalText = button.textContent;
