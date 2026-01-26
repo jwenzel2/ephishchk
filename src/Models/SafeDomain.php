@@ -127,53 +127,53 @@ class SafeDomain
 
         // Trim whitespace
         $domain = trim($domain);
-        error_log("[normalizeDomain] After trim: '{$domain}'");
+        file_put_contents($debugLog, "[{$timestamp}] After trim: '{$domain}'\n", FILE_APPEND);
 
         // Return empty if only whitespace
         if ($domain === '') {
-            error_log("[normalizeDomain] Only whitespace after trim");
+            file_put_contents($debugLog, "[{$timestamp}] Only whitespace after trim\n", FILE_APPEND);
             return '';
         }
 
         // Convert to lowercase
         $domain = strtolower($domain);
-        error_log("[normalizeDomain] After lowercase: '{$domain}'");
+        file_put_contents($debugLog, "[{$timestamp}] After lowercase: '{$domain}'\n", FILE_APPEND);
 
         // Remove protocol
         $result = preg_replace('#^https?://#i', '', $domain);
         if ($result === null) {
-            error_log("[normalizeDomain] Regex error on protocol removal");
+            file_put_contents($debugLog, "[{$timestamp}] Regex error on protocol removal\n", FILE_APPEND);
             return ''; // Regex error
         }
         $domain = $result;
-        error_log("[normalizeDomain] After protocol removal: '{$domain}'");
+        file_put_contents($debugLog, "[{$timestamp}] After protocol removal: '{$domain}'\n", FILE_APPEND);
 
         // Remove www. prefix
         $result = preg_replace('#^www\.#i', '', $domain);
         if ($result === null) {
-            error_log("[normalizeDomain] Regex error on www removal");
+            file_put_contents($debugLog, "[{$timestamp}] Regex error on www removal\n", FILE_APPEND);
             return ''; // Regex error
         }
         $domain = $result;
-        error_log("[normalizeDomain] After www removal: '{$domain}'");
+        file_put_contents($debugLog, "[{$timestamp}] After www removal: '{$domain}'\n", FILE_APPEND);
 
         // Remove path, query string, and fragment
         $result = preg_replace('#[/?#].*$#', '', $domain);
         if ($result === null) {
-            error_log("[normalizeDomain] Regex error on path removal");
+            file_put_contents($debugLog, "[{$timestamp}] Regex error on path removal\n", FILE_APPEND);
             return ''; // Regex error
         }
         $domain = $result;
-        error_log("[normalizeDomain] After path removal: '{$domain}'");
+        file_put_contents($debugLog, "[{$timestamp}] After path removal: '{$domain}' (THIS IS THE PROBLEM IF EMPTY)\n", FILE_APPEND);
 
         // Remove port if present
         $result = preg_replace('#:\d+$#', '', $domain);
         if ($result === null) {
-            error_log("[normalizeDomain] Regex error on port removal");
+            file_put_contents($debugLog, "[{$timestamp}] Regex error on port removal\n", FILE_APPEND);
             return ''; // Regex error
         }
         $domain = $result;
-        error_log("[normalizeDomain] After port removal: '{$domain}'");
+        file_put_contents($debugLog, "[{$timestamp}] After port removal: '{$domain}'\n", FILE_APPEND);
 
         file_put_contents($debugLog, "[{$timestamp}] normalizeDomain() FINAL: '{$original}' -> '{$domain}'\n", FILE_APPEND);
         error_log("[normalizeDomain] FINAL: '{$original}' -> '{$domain}'");
