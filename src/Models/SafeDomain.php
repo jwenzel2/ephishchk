@@ -26,6 +26,15 @@ class SafeDomain
     {
         $normalizedDomain = $this->normalizeDomain($domain);
 
+        // Log normalization result
+        error_log("[SafeDomain::create] Input: '{$domain}' -> Normalized: '{$normalizedDomain}'");
+
+        // Prevent storing empty domains
+        if (empty($normalizedDomain)) {
+            error_log("[SafeDomain::create] ERROR: Normalized domain is empty, refusing to store");
+            throw new \InvalidArgumentException("Invalid domain: '{$domain}' normalized to empty string");
+        }
+
         // Check if domain already exists
         if ($this->exists($normalizedDomain)) {
             return null;
@@ -100,50 +109,65 @@ class SafeDomain
      */
     public function normalizeDomain(string $domain): string
     {
+        $original = $domain;
+
         // Handle empty or null input
         if (empty($domain)) {
+            error_log("[normalizeDomain] Empty input");
             return '';
         }
 
         // Trim whitespace
         $domain = trim($domain);
+        error_log("[normalizeDomain] After trim: '{$domain}'");
 
         // Return empty if only whitespace
         if ($domain === '') {
+            error_log("[normalizeDomain] Only whitespace after trim");
             return '';
         }
 
         // Convert to lowercase
         $domain = strtolower($domain);
+        error_log("[normalizeDomain] After lowercase: '{$domain}'");
 
         // Remove protocol
         $result = preg_replace('#^https?://#i', '', $domain);
         if ($result === null) {
+            error_log("[normalizeDomain] Regex error on protocol removal");
             return ''; // Regex error
         }
         $domain = $result;
+        error_log("[normalizeDomain] After protocol removal: '{$domain}'");
 
         // Remove www. prefix
         $result = preg_replace('#^www\.#i', '', $domain);
         if ($result === null) {
+            error_log("[normalizeDomain] Regex error on www removal");
             return ''; // Regex error
         }
         $domain = $result;
+        error_log("[normalizeDomain] After www removal: '{$domain}'");
 
         // Remove path, query string, and fragment
         $result = preg_replace('#[/?#].*$#', '', $domain);
         if ($result === null) {
+            error_log("[normalizeDomain] Regex error on path removal");
             return ''; // Regex error
         }
         $domain = $result;
+        error_log("[normalizeDomain] After path removal: '{$domain}'");
 
         // Remove port if present
         $result = preg_replace('#:\d+$#', '', $domain);
         if ($result === null) {
+            error_log("[normalizeDomain] Regex error on port removal");
             return ''; // Regex error
         }
         $domain = $result;
+        error_log("[normalizeDomain] After port removal: '{$domain}'");
 
+        error_log("[normalizeDomain] FINAL: '{$original}' -> '{$domain}'");
         return $domain;
     }
 
