@@ -162,7 +162,7 @@ class AdminController extends BaseController
         $domain = InputSanitizer::string($this->getPost('domain', ''));
         $notes = InputSanitizer::string($this->getPost('notes', ''));
 
-        if (empty($domain)) {
+        if (empty($domain) || trim($domain) === '') {
             if ($this->isAjax()) {
                 return $this->json(['error' => 'Domain is required'], 400);
             }
@@ -170,6 +170,15 @@ class AdminController extends BaseController
         }
 
         $safeDomainModel = new SafeDomain($this->app->getDatabase());
+
+        // Normalize and validate domain
+        $normalizedDomain = $safeDomainModel->normalizeDomain($domain);
+        if (empty($normalizedDomain)) {
+            if ($this->isAjax()) {
+                return $this->json(['error' => 'Invalid domain format'], 400);
+            }
+            return $this->redirect('/admin/safe-domains');
+        }
 
         // Check if domain already exists
         if ($safeDomainModel->exists($domain)) {
@@ -227,11 +236,17 @@ class AdminController extends BaseController
 
         $domain = InputSanitizer::string($this->getPost('domain', ''));
 
-        if (empty($domain)) {
+        if (empty($domain) || trim($domain) === '') {
             return $this->json(['error' => 'Domain is required'], 400);
         }
 
         $safeDomainModel = new SafeDomain($this->app->getDatabase());
+
+        // Normalize and validate domain
+        $normalizedDomain = $safeDomainModel->normalizeDomain($domain);
+        if (empty($normalizedDomain)) {
+            return $this->json(['error' => 'Invalid domain format'], 400);
+        }
 
         // Check if domain already exists
         if ($safeDomainModel->exists($domain)) {

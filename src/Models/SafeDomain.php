@@ -100,23 +100,33 @@ class SafeDomain
      */
     public function normalizeDomain(string $domain): string
     {
+        // Handle empty or null input
+        if (empty($domain)) {
+            return '';
+        }
+
         // Trim whitespace
         $domain = trim($domain);
+
+        // Return empty if only whitespace
+        if ($domain === '') {
+            return '';
+        }
 
         // Convert to lowercase
         $domain = strtolower($domain);
 
         // Remove protocol
-        $domain = preg_replace('#^https?://#i', '', $domain);
+        $domain = preg_replace('#^https?://#i', '', $domain) ?? '';
 
         // Remove www. prefix
-        $domain = preg_replace('#^www\.#i', '', $domain);
+        $domain = preg_replace('#^www\.#i', '', $domain) ?? '';
 
         // Remove path, query string, and fragment
-        $domain = preg_replace('#[/?#].*$#', '', $domain);
+        $domain = preg_replace('#[/?#].*$#', '', $domain) ?? '';
 
         // Remove port if present
-        $domain = preg_replace('#:\d+$#', '', $domain);
+        $domain = preg_replace('#:\d+$#', '', $domain) ?? '';
 
         return $domain;
     }
