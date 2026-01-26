@@ -60,13 +60,13 @@ if ($theme === 'dark') {
 
     <main class="container">
         <?php if (!empty($error)): ?>
-            <div class="alert alert-error">
+            <div class="alert alert-error auto-dismiss">
                 <?= $e($error) ?>
             </div>
         <?php endif; ?>
 
         <?php if (!empty($success)): ?>
-            <div class="alert alert-success">
+            <div class="alert alert-success auto-dismiss">
                 <?= $e($success) ?>
             </div>
         <?php endif; ?>

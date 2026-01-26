@@ -18,6 +18,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Apply auto theme if needed
     applyAutoTheme();
 
+    // Auto-dismiss alerts after 20 seconds
+    initAutoDismissAlerts();
+
     // Debug: Check CSRF token on page load
     const csrfMeta = document.querySelector('meta[name="csrf-token"]');
     if (csrfMeta) {
@@ -931,4 +934,38 @@ async function addDomainToSafeList(button) {
         button.disabled = false;
         button.textContent = originalText;
     }
+}
+
+/**
+ * Initialize auto-dismiss functionality for alerts
+ */
+function initAutoDismissAlerts() {
+    const alerts = document.querySelectorAll('.alert.auto-dismiss');
+
+    alerts.forEach(alert => {
+        // Add a close button
+        const closeBtn = document.createElement('button');
+        closeBtn.className = 'alert-close';
+        closeBtn.innerHTML = '&times;';
+        closeBtn.setAttribute('aria-label', 'Close');
+        closeBtn.onclick = () => dismissAlert(alert);
+        alert.appendChild(closeBtn);
+
+        // Auto-dismiss after 20 seconds
+        setTimeout(() => {
+            dismissAlert(alert);
+        }, 20000);
+    });
+}
+
+/**
+ * Dismiss an alert with fade-out animation
+ */
+function dismissAlert(alert) {
+    alert.style.opacity = '0';
+    alert.style.transition = 'opacity 0.5s ease';
+
+    setTimeout(() => {
+        alert.remove();
+    }, 500);
 }
