@@ -158,13 +158,13 @@ class SafeDomain
         file_put_contents($debugLog, "[{$timestamp}] After www removal: '{$domain}'\n", FILE_APPEND);
 
         // Remove path, query string, and fragment
-        $result = preg_replace('#[/?#].*$#', '', $domain);
+        $result = preg_replace('#[/?\#].*$#', '', $domain);
         if ($result === null) {
             file_put_contents($debugLog, "[{$timestamp}] Regex error on path removal\n", FILE_APPEND);
             return ''; // Regex error
         }
         $domain = $result;
-        file_put_contents($debugLog, "[{$timestamp}] After path removal: '{$domain}' (THIS IS THE PROBLEM IF EMPTY)\n", FILE_APPEND);
+        file_put_contents($debugLog, "[{$timestamp}] After path removal: '{$domain}'\n", FILE_APPEND);
 
         // Remove port if present
         $result = preg_replace('#:\d+$#', '', $domain);
