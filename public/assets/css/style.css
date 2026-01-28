@@ -997,6 +997,41 @@ main {
     border-radius: var(--radius-sm);
 }
 
+.typosquat-alert {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+    padding: 0.75rem;
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid var(--color-error);
+    border-radius: var(--radius-sm);
+}
+
+.typosquat-alert .alert-icon {
+    font-size: 1.25rem;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+.typosquat-alert .alert-text {
+    font-size: 0.875rem;
+    color: var(--color-text);
+    line-height: 1.5;
+}
+
+.typosquat-alert .alert-text strong {
+    color: var(--color-error);
+    font-weight: 600;
+}
+
+.typosquat-alert .alert-details {
+    display: block;
+    margin-top: 0.25rem;
+    color: var(--color-text-muted);
+    font-size: 0.8125rem;
+}
+
 .additional-headers,
 .received-headers {
     border-top: 1px solid var(--color-border);
@@ -1843,4 +1878,13 @@ main {
     background: var(--color-warning);
     color: #000000;
     font-weight: 700;
+}
+
+[data-theme="dark"] .typosquat-alert {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: var(--color-error);
+}
+
+[data-theme="dark"] .typosquat-alert .alert-text strong {
+    color: #fca5a5;
 }

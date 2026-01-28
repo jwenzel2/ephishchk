@@ -4,21 +4,36 @@ declare(strict_types=1);
 
 namespace Ephishchk\Services\Email;
 
+use Ephishchk\Services\Scanner\TyposquattingDetectionService;
+
 /**
  * Email Header Analyzer Service - detects suspicious patterns
  */
 class HeaderAnalyzerService
 {
     private array $suspiciousPatterns = [];
+    private ?TyposquattingDetectionService $typosquattingDetector = null;
+    private array $safeDomains = [];
 
-    public function __construct(array $config = [])
-    {
+    public function __construct(
+        array $config = [],
+        ?TyposquattingDetectionService $typosquattingDetector = null
+    ) {
         $this->suspiciousPatterns = $config['suspicious_patterns'] ?? [
             'x_originating_ip_mismatch' => true,
             'authentication_failures' => true,
             'unusual_routing' => true,
             'domain_mismatch' => true,
         ];
+        $this->typosquattingDetector = $typosquattingDetector;
+    }
+
+    /**
+     * Set safe domains for typosquatting detection
+     */
+    public function setSafeDomains(array $domains): void
+    {
+        $this->safeDomains = $domains;
     }
 
     /**
@@ -56,6 +71,13 @@ class HeaderAnalyzerService
         $patternFindings = $this->checkSuspiciousPatterns($email);
         $findings = array_merge($findings, $patternFindings['findings']);
         $score += $patternFindings['score'];
+
+        // Check for typosquatting in header domains
+        if ($this->typosquattingDetector && !empty($this->safeDomains)) {
+            $typosquattingFindings = $this->checkHeaderTyposquatting($email);
+            $findings = array_merge($findings, $typosquattingFindings['findings']);
+            $score += $typosquattingFindings['score'];
+        }
 
         // Normalize score to 0-100
         $score = min(100, max(0, $score));
@@ -317,6 +339,54 @@ class HeaderAnalyzerService
                 ];
                 $score += 10;
                 break;
+            }
+        }
+
+        return ['findings' => $findings, 'score' => $score];
+    }
+
+    /**
+     * Check header domains for typosquatting attempts against safe domains
+     */
+    private function checkHeaderTyposquatting(ParsedEmail $email): array
+    {
+        $findings = [];
+        $score = 0;
+
+        // Extract header domains
+        $headerDomains = [
+            'from' => null,
+            'reply_to' => null,
+            'return_path' => null,
+        ];
+
+        $from = $email->getFrom();
+        if ($from && isset($from['email'])) {
+            $headerDomains['from'] = $this->extractDomain($from['email']);
+        }
+
+        $replyTo = $email->getReplyTo();
+        if ($replyTo && isset($replyTo['email'])) {
+            $headerDomains['reply_to'] = $this->extractDomain($replyTo['email']);
+        }
+
+        $returnPath = $email->getReturnPath();
+        if ($returnPath) {
+            $headerDomains['return_path'] = $this->extractDomain($returnPath);
+        }
+
+        // Check each domain against safe domains list
+        foreach ($headerDomains as $headerField => $domain) {
+            if (!$domain) {
+                continue;
+            }
+
+            $finding = $this->typosquattingDetector->checkDomainAgainstSafeList($domain, $this->safeDomains);
+            if ($finding) {
+                // Add header field identifier to the finding
+                $finding['header_field'] = $headerField;
+                $findings[] = $finding;
+                $score += 40;
             }
         }
 

@@ -19,6 +19,7 @@ use Ephishchk\Services\Email\HeaderAnalyzerService;
 use Ephishchk\Services\Email\AttachmentExtractor;
 use Ephishchk\Services\Scanner\LinkExtractorService;
 use Ephishchk\Services\Scanner\LinkAnalyzerService;
+use Ephishchk\Services\Scanner\TyposquattingDetectionService;
 use Ephishchk\Services\VirusTotal\RateLimiter;
 use Ephishchk\Services\VirusTotal\VirusTotalClient;
 use Ephishchk\Security\InputSanitizer;
@@ -45,6 +46,7 @@ class ScanOrchestrator
     private AttachmentExtractor $attachmentExtractor;
     private LinkExtractorService $linkExtractor;
     private LinkAnalyzerService $linkAnalyzer;
+    private TyposquattingDetectionService $typosquattingDetector;
     private ?VirusTotalClient $virusTotal = null;
 
     public function __construct(Application $app)
@@ -74,13 +76,14 @@ class ScanOrchestrator
             $this->dkim = new DkimCheckerService($this->dns, $config['dkim_selectors'] ?? []);
             $this->dmarc = new DmarcCheckerService($this->dns);
             $this->emailParser = new EmailParserService();
-            $this->headerAnalyzer = new HeaderAnalyzerService($config);
+            $this->typosquattingDetector = new TyposquattingDetectionService();
+            $this->headerAnalyzer = new HeaderAnalyzerService($config, $this->typosquattingDetector);
             $this->attachmentExtractor = new AttachmentExtractor(
                 $config['paths']['temp'] ?? sys_get_temp_dir(),
                 $config['max_attachment_size'] ?? 33554432
             );
             $this->linkExtractor = new LinkExtractorService($config['max_links_per_scan'] ?? 50);
-            $this->linkAnalyzer = new LinkAnalyzerService($this->dns);
+            $this->linkAnalyzer = new LinkAnalyzerService($this->dns, $this->typosquattingDetector);
 
             $this->logger->debug('Services initialized');
 
@@ -336,6 +339,11 @@ class ScanOrchestrator
     private function runHeaderAnalysis(int $scanId, $email): void
     {
         try {
+            // Load safe domains for typosquatting detection
+            $safeDomains = $this->safeDomainModel->getAllDomainStrings();
+            $this->headerAnalyzer->setSafeDomains($safeDomains);
+            $this->logger->debug('Safe domains loaded for header analysis', ['count' => count($safeDomains)]);
+
             $result = $this->headerAnalyzer->analyze($email);
 
             $status = 'pass';

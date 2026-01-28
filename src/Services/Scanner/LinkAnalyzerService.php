@@ -12,6 +12,7 @@ use Ephishchk\Services\Authentication\DnsLookupService;
 class LinkAnalyzerService
 {
     private DnsLookupService $dns;
+    private TyposquattingDetectionService $typosquattingDetector;
     private array $safeDomains = [];
 
     // Known URL shortener domains
@@ -36,9 +37,12 @@ class LinkAnalyzerService
         'twitter', 'outlook', 'office365', 'icloud', 'steam',
     ];
 
-    public function __construct(DnsLookupService $dns)
-    {
+    public function __construct(
+        DnsLookupService $dns,
+        TyposquattingDetectionService $typosquattingDetector
+    ) {
         $this->dns = $dns;
+        $this->typosquattingDetector = $typosquattingDetector;
     }
 
     /**
@@ -116,7 +120,7 @@ class LinkAnalyzerService
 
         // Check for typosquatting against safe domains
         if (!empty($this->safeDomains)) {
-            $typosquattingCheck = $this->checkTyposquattingAgainstSafeDomains($domain, $this->safeDomains);
+            $typosquattingCheck = $this->typosquattingDetector->checkDomainAgainstSafeList($domain, $this->safeDomains);
             if ($typosquattingCheck) {
                 $findings[] = $typosquattingCheck;
                 $score += 40;
@@ -395,134 +399,6 @@ class LinkAnalyzerService
         }
 
         return $findings;
-    }
-
-    /**
-     * Check for typosquatting attempts against safe domains
-     *
-     * Uses multiple detection techniques:
-     * 1. Levenshtein distance - detects 1-2 character differences
-     * 2. Character substitution - detects l33t speak variants (g00gle, paypa1)
-     * 3. Homograph attacks - detects punycode/visually similar characters
-     */
-    private function checkTyposquattingAgainstSafeDomains(string $domain, array $safeDomains): ?array
-    {
-        // Normalize the scanned domain
-        $normalizedDomain = strtolower($domain);
-        $normalizedDomain = preg_replace('/^www\./', '', $normalizedDomain);
-
-        // Extract second-level domain (SLD) for comparison
-        $scannedSLD = $this->extractSecondLevelDomain($normalizedDomain);
-
-        foreach ($safeDomains as $safeDomain) {
-            $normalizedSafe = strtolower($safeDomain);
-            $normalizedSafe = preg_replace('/^www\./', '', $normalizedSafe);
-
-            // Extract SLD from safe domain
-            $safeSLD = $this->extractSecondLevelDomain($normalizedSafe);
-
-            // Skip exact matches
-            if ($scannedSLD === $safeSLD || $normalizedDomain === $normalizedSafe) {
-                continue;
-            }
-
-            // Skip very short domains to avoid false positives
-            if (strlen($safeSLD) <= 5) {
-                continue;
-            }
-
-            // 1. Check Levenshtein distance (1-2 character difference)
-            $distance = levenshtein($scannedSLD, $safeSLD);
-            if ($distance > 0 && $distance <= 2) {
-                return [
-                    'type' => 'typosquatting_safe_domain',
-                    'severity' => 'high',
-                    'message' => "Possible typosquatting of trusted domain: {$safeDomain}",
-                    'details' => "Domain '{$scannedSLD}' is very similar to trusted domain '{$safeSLD}' (character difference: {$distance})",
-                ];
-            }
-
-            // 2. Check character substitution (l33t speak)
-            if ($this->isCharacterSubstitution($scannedSLD, $safeSLD)) {
-                return [
-                    'type' => 'typosquatting_safe_domain',
-                    'severity' => 'high',
-                    'message' => "Possible typosquatting of trusted domain: {$safeDomain}",
-                    'details' => "Domain '{$scannedSLD}' uses character substitution to mimic trusted domain '{$safeSLD}'",
-                ];
-            }
-
-            // 3. Check for homograph attacks (punycode)
-            if (str_contains($normalizedDomain, 'xn--')) {
-                // Check if decoded domain is similar to safe domain
-                $decoded = idn_to_utf8($normalizedDomain);
-                if ($decoded && str_contains(strtolower($decoded), $safeSLD)) {
-                    return [
-                        'type' => 'typosquatting_safe_domain',
-                        'severity' => 'high',
-                        'message' => "Possible homograph attack targeting trusted domain: {$safeDomain}",
-                        'details' => "Domain uses punycode encoding to visually mimic '{$safeSLD}'",
-                    ];
-                }
-            }
-        }
-
-        return null;
-    }
-
-    /**
-     * Extract second-level domain (SLD) from a full domain
-     * Example: 'login.google.com' -> 'google'
-     * Example: 'google.com' -> 'google'
-     */
-    private function extractSecondLevelDomain(string $domain): string
-    {
-        $parts = explode('.', $domain);
-
-        // Handle cases like 'google.co.uk' by taking second-to-last part
-        if (count($parts) >= 2) {
-            return $parts[count($parts) - 2];
-        }
-
-        return $domain;
-    }
-
-    /**
-     * Check if scanned domain uses character substitution to mimic safe domain
-     * Detects: 0→o, 1→l, 3→e, 4→a, 5→s, 7→t, @→a, $→s
-     */
-    private function isCharacterSubstitution(string $scanned, string $safe): bool
-    {
-        $substitutions = [
-            '0' => 'o',
-            '1' => ['l', 'i'],
-            '3' => 'e',
-            '4' => 'a',
-            '5' => 's',
-            '7' => 't',
-            '@' => 'a',
-            '$' => 's',
-        ];
-
-        // Create all possible substitution variants of the safe domain
-        $variants = [$safe];
-
-        foreach ($substitutions as $leetChar => $normalChars) {
-            $normalChars = is_array($normalChars) ? $normalChars : [$normalChars];
-            $newVariants = [];
-
-            foreach ($variants as $variant) {
-                foreach ($normalChars as $normalChar) {
-                    if (str_contains($variant, $normalChar)) {
-                        $newVariants[] = str_replace($normalChar, $leetChar, $variant);
-                    }
-                }
-            }
-
-            $variants = array_merge($variants, $newVariants);
-        }
-
-        return in_array($scanned, $variants);
     }
 
     /**

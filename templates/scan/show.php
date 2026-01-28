@@ -79,6 +79,17 @@ if (($scan['risk_score'] ?? 0) >= 50) {
     <?php
     // Extract headers from header analysis result
     $extractedHeaders = $resultsByType['header']['details']['extracted_headers'] ?? [];
+
+    // Extract typosquatting findings from header analysis
+    $headerTyposquattingFindings = [];
+    if (isset($resultsByType['header']['details']['findings'])) {
+        foreach ($resultsByType['header']['details']['findings'] as $finding) {
+            if (isset($finding['header_field']) && $finding['type'] === 'typosquatting_safe_domain') {
+                $headerTyposquattingFindings[$finding['header_field']] = $finding;
+            }
+        }
+    }
+
     if (!empty($extractedHeaders) && $scan['scan_type'] === 'full'):
     ?>
     <div class="email-headers-section card">
@@ -121,6 +132,21 @@ if (($scan['risk_score'] ?? 0) >= 50) {
                     <span class="header-value"><?= $e($header['full']) ?></span>
                     <?php if ($isDifferent): ?>
                         <span class="header-alert">Domain differs from sender</span>
+                    <?php endif; ?>
+                    <?php
+                    // Display typosquatting warning if detected for this header
+                    if (isset($headerTyposquattingFindings[$headerKey])):
+                        $finding = $headerTyposquattingFindings[$headerKey];
+                    ?>
+                        <div class="typosquat-alert">
+                            <span class="alert-icon">⚠️</span>
+                            <span class="alert-text">
+                                Typosquatting detected: domain resembles <strong><?= $e($finding['matched_safe_domain']) ?></strong>
+                                <?php if (!empty($finding['details'])): ?>
+                                    <br><small class="alert-details"><?= $e($finding['details']) ?></small>
+                                <?php endif; ?>
+                            </span>
+                        </div>
                     <?php endif; ?>
                 </div>
             </div>
