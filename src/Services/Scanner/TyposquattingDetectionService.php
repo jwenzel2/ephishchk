@@ -158,7 +158,8 @@ class TyposquattingDetectionService
             foreach ($variants as $variant) {
                 foreach ($normalChars as $normalChar) {
                     if (str_contains($variant, $normalChar)) {
-                        $newVariants[] = str_replace($normalChar, $leetChar, $variant);
+                        // Cast $leetChar to string to avoid type error when PHP converts numeric keys to integers
+                        $newVariants[] = str_replace($normalChar, (string)$leetChar, $variant);
                     }
                 }
             }
