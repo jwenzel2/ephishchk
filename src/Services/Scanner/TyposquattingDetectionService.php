@@ -54,7 +54,7 @@ class TyposquattingDetectionService
             }
 
             // Skip very short domains to avoid false positives
-            if (strlen($safeSLD) <= 5) {
+            if (strlen($safeSLD) <= 4) {
                 error_log("[TyposquattingDetection] Skipping $safeSLD (too short: " . strlen($safeSLD) . " chars)");
                 continue;
             }
