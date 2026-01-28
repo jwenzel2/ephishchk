@@ -23,12 +23,18 @@ class TyposquattingDetectionService
      */
     public function checkDomainAgainstSafeList(string $domain, array $safeDomains): ?array
     {
+        // Debug logging
+        error_log("[TyposquattingDetection] Checking domain: $domain");
+        error_log("[TyposquattingDetection] Safe domains count: " . count($safeDomains));
+        error_log("[TyposquattingDetection] Safe domains: " . implode(', ', array_slice($safeDomains, 0, 10)));
+
         // Normalize the scanned domain
         $normalizedDomain = strtolower($domain);
         $normalizedDomain = preg_replace('/^www\./', '', $normalizedDomain);
 
         // Extract second-level domain (SLD) for comparison
         $scannedSLD = $this->extractSecondLevelDomain($normalizedDomain);
+        error_log("[TyposquattingDetection] Scanned SLD: $scannedSLD");
 
         foreach ($safeDomains as $safeDomain) {
             $normalizedSafe = strtolower($safeDomain);
@@ -49,12 +55,15 @@ class TyposquattingDetectionService
 
             // Skip very short domains to avoid false positives
             if (strlen($safeSLD) <= 5) {
+                error_log("[TyposquattingDetection] Skipping $safeSLD (too short: " . strlen($safeSLD) . " chars)");
                 continue;
             }
 
             // 1. Check Levenshtein distance (1-2 character difference)
             $distance = levenshtein($scannedSLD, $safeSLD);
+            error_log("[TyposquattingDetection] Comparing '$scannedSLD' vs '$safeSLD' - distance: $distance");
             if ($distance > 0 && $distance <= 2) {
+                error_log("[TyposquattingDetection] ✓ MATCH FOUND! Typosquatting detected");
                 return [
                     'type' => 'typosquatting_safe_domain',
                     'severity' => 'high',
@@ -94,6 +103,7 @@ class TyposquattingDetectionService
             }
         }
 
+        error_log("[TyposquattingDetection] No typosquatting detected for domain: $domain");
         return null;
     }
 

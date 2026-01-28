@@ -350,6 +350,9 @@ class HeaderAnalyzerService
      */
     private function checkHeaderTyposquatting(ParsedEmail $email): array
     {
+        error_log("[HeaderAnalyzer] Starting typosquatting checks for header domains");
+        error_log("[HeaderAnalyzer] Safe domains count: " . count($this->safeDomains));
+
         $findings = [];
         $score = 0;
 
@@ -381,8 +384,10 @@ class HeaderAnalyzerService
                 continue;
             }
 
+            error_log("[HeaderAnalyzer] Checking $headerField domain: $domain");
             $finding = $this->typosquattingDetector->checkDomainAgainstSafeList($domain, $this->safeDomains);
             if ($finding) {
+                error_log("[HeaderAnalyzer] ✓ Typosquatting finding for $headerField: {$finding['matched_safe_domain']}");
                 // Add header field identifier to the finding
                 $finding['header_field'] = $headerField;
                 $findings[] = $finding;
