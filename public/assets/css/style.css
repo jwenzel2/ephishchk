@@ -676,19 +676,37 @@ main {
 .detail-item.info { color: var(--color-text-muted); }
 
 .finding {
-    padding: 0.5rem;
+    padding: 0.75rem;
     border-radius: var(--radius-sm);
     margin-bottom: 0.5rem;
+    line-height: 1.5;
 }
 
-.finding-high { background: #fee2e2; }
-.finding-warning { background: #fef3c7; }
-.finding-info { background: var(--color-bg); }
+.finding-high {
+    background: #fee2e2;
+    color: #7f1d1d;
+    border-left: 3px solid #dc2626;
+}
+
+.finding-warning {
+    background: #fef3c7;
+    color: #78350f;
+    border-left: 3px solid #f59e0b;
+}
+
+.finding-info {
+    background: #f1f5f9;
+    color: #1e293b;
+    border-left: 3px solid #64748b;
+}
 
 .finding-type {
     font-weight: 600;
     display: inline-block;
     margin-right: 0.5rem;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
 }
 
 .recommendation {
@@ -1887,4 +1905,23 @@ main {
 
 [data-theme="dark"] .typosquat-alert .alert-text strong {
     color: #fca5a5;
+}
+
+/* Dark Theme Adjustments for Findings */
+[data-theme="dark"] .finding-high {
+    background: rgba(239, 68, 68, 0.2);
+    color: #fca5a5;
+    border-left-color: #ef4444;
+}
+
+[data-theme="dark"] .finding-warning {
+    background: rgba(245, 158, 11, 0.2);
+    color: #fcd34d;
+    border-left-color: #f59e0b;
+}
+
+[data-theme="dark"] .finding-info {
+    background: rgba(148, 163, 184, 0.1);
+    color: #cbd5e1;
+    border-left-color: #64748b;
 }
