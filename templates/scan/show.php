@@ -11,7 +11,7 @@ $statusClass = match($scan['status']) {
 
 $statusText = match($scan['status']) {
     'completed' => 'Completed',
-    'failed' => 'Suspicious',
+    'failed' => 'Failed',
     'processing' => 'Processing',
     default => ucfirst($scan['status'])
 };
