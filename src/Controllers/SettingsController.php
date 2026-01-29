@@ -80,14 +80,12 @@ class SettingsController extends BaseController
 
         // Timezone setting
         $timezone = $this->getPost('timezone', 'UTC');
-        $validTimezones = [
-            'America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles',
-            'America/Anchorage', 'Pacific/Honolulu', 'America/Phoenix', 'UTC',
-            'Europe/London', 'Europe/Paris', 'Europe/Berlin',
-            'Asia/Tokyo', 'Asia/Shanghai', 'Asia/Kolkata', 'Australia/Sydney',
-        ];
+        // Validate against PHP's list of valid timezone identifiers
+        $validTimezones = \DateTimeZone::listIdentifiers();
         if (in_array($timezone, $validTimezones)) {
             $settingModel->set('timezone', $timezone, 'string');
+            // Apply timezone immediately for this request
+            date_default_timezone_set($timezone);
         }
 
         if ($this->isAjax()) {

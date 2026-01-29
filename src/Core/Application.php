@@ -27,6 +27,9 @@ class Application
 
         // Create storage directories if they don't exist
         $this->ensureDirectories();
+
+        // Set timezone from database settings
+        $this->initializeTimezone();
     }
 
     private function ensureDirectories(): void
@@ -42,6 +45,29 @@ class Application
             if (!is_dir($dir)) {
                 mkdir($dir, 0755, true);
             }
+        }
+    }
+
+    /**
+     * Initialize timezone from database settings
+     */
+    private function initializeTimezone(): void
+    {
+        try {
+            $db = $this->getDatabase();
+            $settingModel = new \Ephishchk\Models\Setting($db, $this->config['encryption_key'] ?? null);
+            $timezone = $settingModel->get('timezone', 'UTC');
+
+            // Validate timezone
+            if (in_array($timezone, \DateTimeZone::listIdentifiers())) {
+                date_default_timezone_set($timezone);
+            } else {
+                // Fallback to UTC if invalid
+                date_default_timezone_set('UTC');
+            }
+        } catch (\Exception $e) {
+            // If database not available yet (first run), use UTC
+            date_default_timezone_set('UTC');
         }
     }
 
