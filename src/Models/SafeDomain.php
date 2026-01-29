@@ -54,15 +54,24 @@ class SafeDomain
 
     /**
      * Get all safe domains with user information
+     *
+     * @param int|null $limit Maximum number of results to return
+     * @param int $offset Number of results to skip
+     * @return array
      */
-    public function getAll(): array
+    public function getAll(?int $limit = null, int $offset = 0): array
     {
-        return $this->db->fetchAll(
-            'SELECT sd.*, u.email as added_by_email
-             FROM safe_domains sd
-             LEFT JOIN users u ON sd.added_by_user_id = u.id
-             ORDER BY sd.created_at DESC'
-        );
+        $sql = 'SELECT sd.*, u.email as added_by_email
+                FROM safe_domains sd
+                LEFT JOIN users u ON sd.added_by_user_id = u.id
+                ORDER BY sd.created_at DESC';
+
+        if ($limit !== null) {
+            $sql .= ' LIMIT ? OFFSET ?';
+            return $this->db->fetchAll($sql, [$limit, $offset]);
+        }
+
+        return $this->db->fetchAll($sql);
     }
 
     /**

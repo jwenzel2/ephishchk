@@ -60,12 +60,12 @@ $e = fn($v) => OutputEncoder::html($v ?? '');
     <!-- Safe Domains List -->
     <div class="card">
         <div class="card-header-with-search">
-            <h2>Safe Domains List (<span id="domain-count"><?= $total ?></span>)</h2>
+            <h2>Safe Domains List (<span id="domain-count"><?= $total ?></span> total)</h2>
             <?php if (!empty($domains)): ?>
             <div class="search-box">
                 <input type="text"
                        id="domain-search"
-                       placeholder="Search domains..."
+                       placeholder="Search current page..."
                        class="search-input">
                 <span class="search-icon">🔍</span>
             </div>
@@ -111,6 +111,73 @@ $e = fn($v) => OutputEncoder::html($v ?? '');
                 </tbody>
             </table>
         </div>
+
+        <?php if ($totalPages > 1): ?>
+        <div class="pagination">
+            <?php
+            $currentPage = $page ?? 1;
+            $queryParams = $_GET;
+            unset($queryParams['page']);
+            $baseUrl = '/admin/safe-domains?' . http_build_query($queryParams);
+            $baseUrl = rtrim($baseUrl, '?');
+            $separator = empty($queryParams) ? '?' : '&';
+            ?>
+
+            <!-- First Page -->
+            <?php if ($currentPage > 1): ?>
+                <a href="<?= $baseUrl . $separator ?>page=1" class="pagination-btn" title="First Page">&laquo;</a>
+            <?php else: ?>
+                <span class="pagination-btn disabled" title="First Page">&laquo;</span>
+            <?php endif; ?>
+
+            <!-- Previous Page -->
+            <?php if ($currentPage > 1): ?>
+                <a href="<?= $baseUrl . $separator ?>page=<?= $currentPage - 1 ?>" class="pagination-btn" title="Previous Page">&lsaquo;</a>
+            <?php else: ?>
+                <span class="pagination-btn disabled" title="Previous Page">&lsaquo;</span>
+            <?php endif; ?>
+
+            <!-- Page Numbers -->
+            <?php
+            $startPage = max(1, $currentPage - 2);
+            $endPage = min($totalPages, $currentPage + 2);
+
+            // Adjust if we're at the beginning or end
+            if ($currentPage <= 3) {
+                $endPage = min(5, $totalPages);
+            }
+            if ($currentPage >= $totalPages - 2) {
+                $startPage = max(1, $totalPages - 4);
+            }
+
+            for ($i = $startPage; $i <= $endPage; $i++):
+            ?>
+                <?php if ($i == $currentPage): ?>
+                    <span class="pagination-btn active"><?= $i ?></span>
+                <?php else: ?>
+                    <a href="<?= $baseUrl . $separator ?>page=<?= $i ?>" class="pagination-btn"><?= $i ?></a>
+                <?php endif; ?>
+            <?php endfor; ?>
+
+            <!-- Next Page -->
+            <?php if ($currentPage < $totalPages): ?>
+                <a href="<?= $baseUrl . $separator ?>page=<?= $currentPage + 1 ?>" class="pagination-btn" title="Next Page">&rsaquo;</a>
+            <?php else: ?>
+                <span class="pagination-btn disabled" title="Next Page">&rsaquo;</span>
+            <?php endif; ?>
+
+            <!-- Last Page -->
+            <?php if ($currentPage < $totalPages): ?>
+                <a href="<?= $baseUrl . $separator ?>page=<?= $totalPages ?>" class="pagination-btn" title="Last Page">&raquo;</a>
+            <?php else: ?>
+                <span class="pagination-btn disabled" title="Last Page">&raquo;</span>
+            <?php endif; ?>
+
+            <span class="pagination-info">
+                Showing <?= count($domains) ?> of <?= $total ?> domains
+            </span>
+        </div>
+        <?php endif; ?>
         <?php endif; ?>
     </div>
 
@@ -156,14 +223,13 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('[Safe Domain Form] After normalization:', this.value);
     });
 
-    // Search/filter functionality
+    // Search/filter functionality (searches current page only)
     const searchInput = document.getElementById('domain-search');
     if (searchInput) {
         const table = document.querySelector('.safe-domains-table tbody');
         const rows = table ? table.querySelectorAll('tr') : [];
-        const countElement = document.getElementById('domain-count');
         const noResultsMessage = document.getElementById('no-results');
-        const totalCount = rows.length;
+        const pageSize = <?= $perPage ?? 20 ?>;
 
         searchInput.addEventListener('input', function() {
             const searchTerm = this.value.toLowerCase().trim();
@@ -186,9 +252,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     row.style.display = 'none';
                 }
             });
-
-            // Update count
-            countElement.textContent = visibleCount + ' / ' + totalCount;
 
             // Show/hide no results message
             if (visibleCount === 0 && searchTerm !== '') {

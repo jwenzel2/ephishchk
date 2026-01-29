@@ -140,13 +140,22 @@ class AdminController extends BaseController
             return $redirect;
         }
 
+        $page = InputSanitizer::positiveInt($this->getQuery('page'), 1);
+        $perPage = 20;
+        $offset = ($page - 1) * $perPage;
+
         $safeDomainModel = new SafeDomain($this->app->getDatabase());
-        $domains = $safeDomainModel->getAll();
+        $domains = $safeDomainModel->getAll($perPage, $offset);
+        $total = $safeDomainModel->count();
+        $totalPages = (int) ceil($total / $perPage);
 
         $data = [
             'title' => 'Safe Domains Management',
             'domains' => $domains,
-            'total' => count($domains),
+            'page' => $page,
+            'totalPages' => $totalPages,
+            'total' => $total,
+            'perPage' => $perPage,
         ];
 
         // Add error/success messages from query params
