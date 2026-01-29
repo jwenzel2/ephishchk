@@ -59,11 +59,23 @@ $e = fn($v) => OutputEncoder::html($v ?? '');
 
     <!-- Safe Domains List -->
     <div class="card">
-        <h2>Safe Domains List (<?= $total ?>)</h2>
+        <div class="card-header-with-search">
+            <h2>Safe Domains List (<span id="domain-count"><?= $total ?></span>)</h2>
+            <?php if (!empty($domains)): ?>
+            <div class="search-box">
+                <input type="text"
+                       id="domain-search"
+                       placeholder="Search domains..."
+                       class="search-input">
+                <span class="search-icon">🔍</span>
+            </div>
+            <?php endif; ?>
+        </div>
 
         <?php if (empty($domains)): ?>
         <p class="no-data">No safe domains configured yet.</p>
         <?php else: ?>
+        <p id="no-results" class="no-data" style="display: none;">No domains match your search.</p>
         <div class="table-responsive">
             <table class="data-table safe-domains-table">
                 <thead>
@@ -143,6 +155,59 @@ document.addEventListener('DOMContentLoaded', function() {
         this.value = value.toLowerCase();
         console.log('[Safe Domain Form] After normalization:', this.value);
     });
+
+    // Search/filter functionality
+    const searchInput = document.getElementById('domain-search');
+    if (searchInput) {
+        const table = document.querySelector('.safe-domains-table tbody');
+        const rows = table ? table.querySelectorAll('tr') : [];
+        const countElement = document.getElementById('domain-count');
+        const noResultsMessage = document.getElementById('no-results');
+        const totalCount = rows.length;
+
+        searchInput.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase().trim();
+            let visibleCount = 0;
+
+            rows.forEach(row => {
+                const domain = row.querySelector('.domain-code')?.textContent.toLowerCase() || '';
+                const notes = row.querySelector('td:nth-child(4)')?.textContent.toLowerCase() || '';
+                const addedBy = row.querySelector('td:nth-child(2)')?.textContent.toLowerCase() || '';
+
+                // Search in domain, notes, and added by fields
+                const matches = domain.includes(searchTerm) ||
+                               notes.includes(searchTerm) ||
+                               addedBy.includes(searchTerm);
+
+                if (matches) {
+                    row.style.display = '';
+                    visibleCount++;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+
+            // Update count
+            countElement.textContent = visibleCount + ' / ' + totalCount;
+
+            // Show/hide no results message
+            if (visibleCount === 0 && searchTerm !== '') {
+                noResultsMessage.style.display = 'block';
+                table.parentElement.style.display = 'none';
+            } else {
+                noResultsMessage.style.display = 'none';
+                table.parentElement.style.display = '';
+            }
+        });
+
+        // Clear search on Escape key
+        searchInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                this.value = '';
+                this.dispatchEvent(new Event('input'));
+            }
+        });
+    }
 });
 </script>
 
