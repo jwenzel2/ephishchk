@@ -92,8 +92,11 @@ $e = fn($v) => OutputEncoder::html($v ?? '');
                     <button type="submit" class="btn btn-primary">📤 Upload & Import</button>
                 </form>
                 <small class="form-help">
-                    CSV format: domain, notes, added_by, date_added<br>
-                    Existing domains will be skipped automatically
+                    <strong>CSV format:</strong> domain, notes<br>
+                    Example: google.com, Search engine<br>
+                    • Duplicates are automatically skipped<br>
+                    • Invalid domains are skipped<br>
+                    • You will be recorded as added_by
                 </small>
             </div>
         </div>

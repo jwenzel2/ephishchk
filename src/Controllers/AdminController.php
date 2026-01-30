@@ -303,16 +303,14 @@ class AdminController extends BaseController
         // Create CSV content
         $output = fopen('php://temp', 'r+');
 
-        // CSV Header
-        fputcsv($output, ['domain', 'notes', 'added_by', 'date_added']);
+        // CSV Header (only domain and notes)
+        fputcsv($output, ['domain', 'notes']);
 
         // CSV Rows
         foreach ($domains as $domain) {
             fputcsv($output, [
                 $domain['domain'],
                 $domain['notes'] ?? '',
-                $domain['added_by_email'] ?? 'System',
-                $domain['created_at'],
             ]);
         }
 
@@ -363,7 +361,7 @@ class AdminController extends BaseController
             'total' => 0,
             'added' => 0,
             'skipped' => 0,
-            'errors' => 0,
+            'invalid' => 0,
         ];
 
         // Skip header row
@@ -375,12 +373,18 @@ class AdminController extends BaseController
 
             // Skip empty rows
             if (empty($row[0]) || trim($row[0]) === '') {
-                $stats['skipped']++;
                 continue;
             }
 
             $domain = trim($row[0]);
             $notes = trim($row[1] ?? '');
+
+            // Validate domain format (basic check)
+            if (!$this->isValidDomain($domain)) {
+                error_log("[SafeDomain Import] Invalid domain format: '{$domain}'");
+                $stats['invalid']++;
+                continue;
+            }
 
             // Check if domain already exists
             if ($safeDomainModel->exists($domain)) {
@@ -388,24 +392,57 @@ class AdminController extends BaseController
                 continue;
             }
 
-            // Try to add domain
+            // Try to add domain (added_by = current user, date_added = now)
             try {
-                $safeDomainModel->create($domain, $this->getUserId(), $notes ?: 'Imported from CSV');
+                $safeDomainModel->create($domain, $this->getUserId(), $notes ?: null);
                 $stats['added']++;
             } catch (\Exception $e) {
                 error_log("[SafeDomain Import] Failed to import domain '{$domain}': " . $e->getMessage());
-                $stats['errors']++;
+                $stats['invalid']++;
             }
         }
 
         fclose($handle);
 
         // Build success message
-        $message = "Import complete: {$stats['added']} added, {$stats['skipped']} skipped";
-        if ($stats['errors'] > 0) {
-            $message .= ", {$stats['errors']} errors";
+        $message = "Import complete: {$stats['added']} added";
+        if ($stats['skipped'] > 0) {
+            $message .= ", {$stats['skipped']} skipped (duplicates)";
+        }
+        if ($stats['invalid'] > 0) {
+            $message .= ", {$stats['invalid']} invalid";
         }
 
         return $this->redirect('/admin/safe-domains?success=' . urlencode($message));
+    }
+
+    /**
+     * Validate domain format
+     */
+    private function isValidDomain(string $domain): bool
+    {
+        // Remove protocol if present
+        $domain = preg_replace('#^https?://#i', '', $domain);
+
+        // Remove www. if present
+        $domain = preg_replace('#^www\.#i', '', $domain);
+
+        // Basic domain validation
+        // Must contain at least one dot, valid characters, and not be too short
+        if (strlen($domain) < 3) {
+            return false;
+        }
+
+        // Check for valid domain format (letters, numbers, dots, hyphens)
+        if (!preg_match('/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*$/i', $domain)) {
+            return false;
+        }
+
+        // Must have at least one dot (e.g., example.com)
+        if (strpos($domain, '.') === false) {
+            return false;
+        }
+
+        return true;
     }
 }
