@@ -1839,6 +1839,96 @@ main {
     font-size: 0.875rem;
 }
 
+/* Import/Export Section */
+.import-export-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin-top: 1rem;
+}
+
+@media (max-width: 768px) {
+    .import-export-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.export-section,
+.import-section {
+    padding: 1rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-bg);
+}
+
+.export-section h3,
+.import-section h3 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.125rem;
+    color: var(--color-text);
+}
+
+.export-section p,
+.import-section p {
+    margin: 0 0 1rem 0;
+    color: var(--color-text-muted);
+    font-size: 0.875rem;
+}
+
+.import-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.file-input-wrapper {
+    position: relative;
+}
+
+.file-input-wrapper input[type="file"] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.file-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    border: 2px dashed var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-card);
+    color: var(--color-text);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.file-label:hover {
+    border-color: var(--color-primary);
+    background: var(--color-bg);
+}
+
+.file-icon {
+    font-size: 1.5rem;
+}
+
+.file-text {
+    font-size: 0.9375rem;
+}
+
+.file-input-wrapper input[type="file"]:focus + .file-label {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.card-description {
+    color: var(--color-text-muted);
+    font-size: 0.9375rem;
+    margin: 0.5rem 0 1.5rem 0;
+}
+
 /* Safe Domains Table */
 .safe-domains-table {
     width: 100%;
@@ -2011,6 +2101,22 @@ main {
 [data-theme="dark"] .pagination-btn.active {
     background: var(--color-primary);
     border-color: var(--color-primary);
+}
+
+[data-theme="dark"] .export-section,
+[data-theme="dark"] .import-section {
+    background: #0f172a;
+    border-color: var(--color-border);
+}
+
+[data-theme="dark"] .file-label {
+    background: #1e293b;
+    border-color: var(--color-border);
+}
+
+[data-theme="dark"] .file-label:hover {
+    border-color: var(--color-primary);
+    background: #0f172a;
 }
 
 [data-theme="dark"] .method code {

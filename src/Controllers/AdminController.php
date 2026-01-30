@@ -287,4 +287,125 @@ class AdminController extends BaseController
             'message' => 'Domain added to safe list successfully'
         ]);
     }
+
+    /**
+     * Export safe domains as CSV
+     */
+    public function exportSafeDomains(): Response
+    {
+        if ($redirect = $this->requireAdmin()) {
+            return $redirect;
+        }
+
+        $safeDomainModel = new SafeDomain($this->app->getDatabase());
+        $domains = $safeDomainModel->getAll(); // Get all domains without pagination
+
+        // Create CSV content
+        $output = fopen('php://temp', 'r+');
+
+        // CSV Header
+        fputcsv($output, ['domain', 'notes', 'added_by', 'date_added']);
+
+        // CSV Rows
+        foreach ($domains as $domain) {
+            fputcsv($output, [
+                $domain['domain'],
+                $domain['notes'] ?? '',
+                $domain['added_by_email'] ?? 'System',
+                $domain['created_at'],
+            ]);
+        }
+
+        rewind($output);
+        $csv = stream_get_contents($output);
+        fclose($output);
+
+        // Create filename with timestamp
+        $filename = 'safe-domains-' . date('Y-m-d-His') . '.csv';
+
+        return new Response($csv, 200, [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Content-Length' => strlen($csv),
+        ]);
+    }
+
+    /**
+     * Import safe domains from CSV
+     */
+    public function importSafeDomains(): Response
+    {
+        if ($redirect = $this->requireAdmin()) {
+            return $redirect;
+        }
+
+        // Check if file was uploaded
+        if (!isset($_FILES['csv_file']) || $_FILES['csv_file']['error'] !== UPLOAD_ERR_OK) {
+            return $this->redirect('/admin/safe-domains?error=' . urlencode('No file uploaded or upload error'));
+        }
+
+        $file = $_FILES['csv_file'];
+
+        // Validate file type
+        $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+        if ($ext !== 'csv') {
+            return $this->redirect('/admin/safe-domains?error=' . urlencode('File must be a CSV'));
+        }
+
+        // Read and process CSV
+        $handle = fopen($file['tmp_name'], 'r');
+        if (!$handle) {
+            return $this->redirect('/admin/safe-domains?error=' . urlencode('Could not read CSV file'));
+        }
+
+        $safeDomainModel = new SafeDomain($this->app->getDatabase());
+        $stats = [
+            'total' => 0,
+            'added' => 0,
+            'skipped' => 0,
+            'errors' => 0,
+        ];
+
+        // Skip header row
+        $header = fgetcsv($handle);
+
+        // Process each row
+        while (($row = fgetcsv($handle)) !== false) {
+            $stats['total']++;
+
+            // Skip empty rows
+            if (empty($row[0]) || trim($row[0]) === '') {
+                $stats['skipped']++;
+                continue;
+            }
+
+            $domain = trim($row[0]);
+            $notes = trim($row[1] ?? '');
+
+            // Check if domain already exists
+            if ($safeDomainModel->exists($domain)) {
+                $stats['skipped']++;
+                continue;
+            }
+
+            // Try to add domain
+            try {
+                $safeDomainModel->create($domain, $this->getUserId(), $notes ?: 'Imported from CSV');
+                $stats['added']++;
+            } catch (\Exception $e) {
+                error_log("[SafeDomain Import] Failed to import domain '{$domain}': " . $e->getMessage());
+                $stats['errors']++;
+            }
+        }
+
+        fclose($handle);
+
+        // Build success message
+        $message = "Import complete: {$stats['added']} added, {$stats['skipped']} skipped";
+        if ($stats['errors'] > 0) {
+            $message .= ", {$stats['errors']} errors";
+        }
+
+        return $this->redirect('/admin/safe-domains?success=' . urlencode($message));
+    }
 }

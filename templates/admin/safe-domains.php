@@ -57,6 +57,48 @@ $e = fn($v) => OutputEncoder::html($v ?? '');
         </form>
     </div>
 
+    <!-- Import/Export -->
+    <div class="card">
+        <h2>Import & Export</h2>
+        <p class="card-description">Bulk import domains from CSV or export your current list</p>
+
+        <div class="import-export-grid">
+            <!-- Export -->
+            <div class="export-section">
+                <h3>Export Domains</h3>
+                <p>Download all safe domains as a CSV file</p>
+                <a href="/admin/safe-domains/export" class="btn btn-secondary">
+                    📥 Download CSV
+                </a>
+            </div>
+
+            <!-- Import -->
+            <div class="import-section">
+                <h3>Import Domains</h3>
+                <p>Upload a CSV file to add domains in bulk</p>
+                <form method="POST" action="/admin/safe-domains/import" enctype="multipart/form-data" class="import-form">
+                    <?= $csrfField ?>
+                    <div class="file-input-wrapper">
+                        <input type="file"
+                               id="csv_file"
+                               name="csv_file"
+                               accept=".csv"
+                               required>
+                        <label for="csv_file" class="file-label">
+                            <span class="file-icon">📄</span>
+                            <span class="file-text">Choose CSV file...</span>
+                        </label>
+                    </div>
+                    <button type="submit" class="btn btn-primary">📤 Upload & Import</button>
+                </form>
+                <small class="form-help">
+                    CSV format: domain, notes, added_by, date_added<br>
+                    Existing domains will be skipped automatically
+                </small>
+            </div>
+        </div>
+    </div>
+
     <!-- Safe Domains List -->
     <div class="card">
         <div class="card-header-with-search">
@@ -222,6 +264,20 @@ document.addEventListener('DOMContentLoaded', function() {
         this.value = value.toLowerCase();
         console.log('[Safe Domain Form] After normalization:', this.value);
     });
+
+    // File upload - show selected filename
+    const fileInput = document.getElementById('csv_file');
+    if (fileInput) {
+        fileInput.addEventListener('change', function() {
+            const fileLabel = this.nextElementSibling;
+            const fileText = fileLabel.querySelector('.file-text');
+            if (this.files && this.files.length > 0) {
+                fileText.textContent = this.files[0].name;
+            } else {
+                fileText.textContent = 'Choose CSV file...';
+            }
+        });
+    }
 
     // Search/filter functionality (searches current page only)
     const searchInput = document.getElementById('domain-search');

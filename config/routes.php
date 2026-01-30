@@ -69,4 +69,6 @@ return [
     ['POST', '/admin/safe-domains/add', [AdminController::class, 'addSafeDomain']],
     ['POST', '/admin/safe-domains/delete', [AdminController::class, 'deleteSafeDomain']],
     ['POST', '/admin/safe-domains/add-from-scan', [AdminController::class, 'addDomainFromScan']],
+    ['GET', '/admin/safe-domains/export', [AdminController::class, 'exportSafeDomains']],
+    ['POST', '/admin/safe-domains/import', [AdminController::class, 'importSafeDomains']],
 ];
