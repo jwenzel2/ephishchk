@@ -60,12 +60,17 @@ class SafeDomain
             error_log("[SafeDomain::create] Final username: {$username}");
         }
 
-        return $this->db->insert('safe_domains', [
+        $insertData = [
             'domain' => $normalizedDomain,
             'added_by_user_id' => $userId,
             'added_by_username' => $username,
             'notes' => $notes,
-        ]);
+        ];
+
+        file_put_contents($debugLog, "[{$timestamp}] Inserting into DB: " . json_encode($insertData) . "\n", FILE_APPEND);
+        error_log("[SafeDomain::create] Inserting: " . json_encode($insertData));
+
+        return $this->db->insert('safe_domains', $insertData);
     }
 
     /**
