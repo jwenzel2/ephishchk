@@ -208,9 +208,7 @@ class AdminController extends BaseController
         }
 
         try {
-            $userId = $this->getUserId();
-            error_log("[AdminController] Creating safe domain with userId: {$userId}");
-            $safeDomainModel->create($domain, $userId, $notes);
+            $safeDomainModel->create($domain, $this->getUserId(), $notes);
         } catch (\Exception $e) {
             error_log("[SafeDomain] Failed to create domain: " . $e->getMessage());
             if ($this->isAjax()) {

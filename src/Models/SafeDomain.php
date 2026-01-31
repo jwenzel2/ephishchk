@@ -47,30 +47,16 @@ class SafeDomain
 
         // If username not provided, fetch it from user_id
         if ($username === null) {
-            $debugLog = __DIR__ . "/../../storage/logs/safe_domain_debug.log";
-            file_put_contents($debugLog, "[{$timestamp}] Looking up username for user_id: {$userId}\n", FILE_APPEND);
-
             $user = $this->db->fetchOne('SELECT username FROM users WHERE id = ?', [$userId]);
-            file_put_contents($debugLog, "[{$timestamp}] User query result: " . json_encode($user) . "\n", FILE_APPEND);
-
-            error_log("[SafeDomain::create] User lookup for ID {$userId}: " . json_encode($user));
             $username = $user['username'] ?? 'System';
-
-            file_put_contents($debugLog, "[{$timestamp}] Final username: {$username}\n", FILE_APPEND);
-            error_log("[SafeDomain::create] Final username: {$username}");
         }
 
-        $insertData = [
+        return $this->db->insert('safe_domains', [
             'domain' => $normalizedDomain,
             'added_by_user_id' => $userId,
             'added_by_username' => $username,
             'notes' => $notes,
-        ];
-
-        file_put_contents($debugLog, "[{$timestamp}] Inserting into DB: " . json_encode($insertData) . "\n", FILE_APPEND);
-        error_log("[SafeDomain::create] Inserting: " . json_encode($insertData));
-
-        return $this->db->insert('safe_domains', $insertData);
+        ]);
     }
 
     /**
