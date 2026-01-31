@@ -48,7 +48,9 @@ class SafeDomain
         // If username not provided, fetch it from user_id
         if ($username === null) {
             $user = $this->db->fetchOne('SELECT username FROM users WHERE id = ?', [$userId]);
+            error_log("[SafeDomain::create] User lookup for ID {$userId}: " . json_encode($user));
             $username = $user['username'] ?? 'System';
+            error_log("[SafeDomain::create] Final username: {$username}");
         }
 
         return $this->db->insert('safe_domains', [
