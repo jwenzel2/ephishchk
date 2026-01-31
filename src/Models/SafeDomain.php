@@ -22,7 +22,7 @@ class SafeDomain
     /**
      * Create a new safe domain entry with normalization
      */
-    public function create(string $domain, int $userId, ?string $notes = null): ?int
+    public function create(string $domain, int $userId, ?string $notes = null, ?string $username = null): ?int
     {
         $normalizedDomain = $this->normalizeDomain($domain);
 
@@ -45,9 +45,16 @@ class SafeDomain
             return null;
         }
 
+        // If username not provided, fetch it from user_id
+        if ($username === null) {
+            $user = $this->db->fetchOne('SELECT username FROM users WHERE id = ?', [$userId]);
+            $username = $user['username'] ?? 'System';
+        }
+
         return $this->db->insert('safe_domains', [
             'domain' => $normalizedDomain,
             'added_by_user_id' => $userId,
+            'added_by_username' => $username,
             'notes' => $notes,
         ]);
     }
@@ -61,7 +68,7 @@ class SafeDomain
      */
     public function getAll(?int $limit = null, int $offset = 0): array
     {
-        $sql = 'SELECT sd.*, u.email as added_by_email
+        $sql = 'SELECT sd.*, sd.added_by_username, u.username
                 FROM safe_domains sd
                 LEFT JOIN users u ON sd.added_by_user_id = u.id
                 ORDER BY sd.created_at DESC';

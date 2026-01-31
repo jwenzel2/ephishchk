@@ -13,15 +13,15 @@ $e = fn($v) => OutputEncoder::html($v ?? '');
             <?= $csrfField ?>
 
             <div class="form-group">
-                <label for="email">Email Address</label>
+                <label for="username">Username</label>
                 <input
-                    type="email"
-                    id="email"
-                    name="email"
-                    value="<?= $e($email ?? '') ?>"
+                    type="text"
+                    id="username"
+                    name="username"
+                    value="<?= $e($username ?? '') ?>"
                     required
                     autofocus
-                    autocomplete="email"
+                    autocomplete="username"
                 >
             </div>
 

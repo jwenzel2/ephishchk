@@ -47,14 +47,27 @@ class PreferencesController extends BaseController
         $prefModel = new UserPreference($this->app->getDatabase());
         $userId = $this->getUserId();
 
-        // Display name update
-        $displayName = InputSanitizer::string($this->getPost('display_name', ''));
-        if ($displayName !== '') {
+        // Email update
+        $email = InputSanitizer::validateEmail($this->getPost('email', ''));
+        if ($email !== '') {
             $userModel = new User($this->app->getDatabase());
-            $userModel->update($userId, ['display_name' => $displayName]);
+            $currentUser = $userModel->find($userId);
 
-            // Refresh user data in session
-            $this->auth()->refreshUser();
+            // Only update if email changed
+            if ($currentUser && strtolower($currentUser['email']) !== strtolower($email)) {
+                // Check if email already exists for another user
+                if ($userModel->emailExists($email)) {
+                    if ($this->isAjax()) {
+                        return $this->json(['error' => 'Email address is already in use'], 400);
+                    }
+                    return $this->redirect('/preferences?error=email_exists');
+                }
+
+                $userModel->update($userId, ['email' => strtolower($email)]);
+
+                // Refresh user data in session
+                $this->auth()->refreshUser();
+            }
         }
 
         // Theme preference

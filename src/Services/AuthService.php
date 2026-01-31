@@ -59,6 +59,32 @@ class AuthService
     }
 
     /**
+     * Attempt to log in with username and password
+     */
+    public function attemptUsername(string $username, string $password): bool
+    {
+        $user = $this->userModel->findByUsername($username);
+
+        if (!$user) {
+            return false;
+        }
+
+        if (!$this->userModel->isActive($user)) {
+            return false;
+        }
+
+        if (!$this->userModel->verifyPassword($user, $password)) {
+            return false;
+        }
+
+        // Login successful
+        $this->createSession($user);
+        $this->userModel->updateLastLogin($user['id']);
+
+        return true;
+    }
+
+    /**
      * Check if user is logged in
      */
     public function check(): bool
@@ -124,6 +150,34 @@ class AuthService
 
         // Create user
         $userId = $this->userModel->create($email, $password, $displayName);
+
+        // Fetch the created user
+        $user = $this->userModel->find($userId);
+
+        // Auto-login
+        $this->createSession($user);
+        $this->userModel->updateLastLogin($userId);
+
+        return ['success' => true, 'user_id' => $userId];
+    }
+
+    /**
+     * Register a new user with username and auto-login
+     */
+    public function registerWithUsername(string $username, string $email, string $password): array
+    {
+        // Check if username already exists
+        if ($this->userModel->usernameExists($username)) {
+            return ['error' => 'Username is already taken'];
+        }
+
+        // Check if email already exists
+        if ($this->userModel->emailExists($email)) {
+            return ['error' => 'Email address is already registered'];
+        }
+
+        // Create user
+        $userId = $this->userModel->create($username, $email, $password);
 
         // Fetch the created user
         $user = $this->userModel->find($userId);

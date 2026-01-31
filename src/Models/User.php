@@ -23,14 +23,15 @@ class User
     /**
      * Create a new user
      */
-    public function create(string $email, string $password, ?string $displayName = null): int
+    public function create(string $username, string $email, string $password): int
     {
         $passwordHash = password_hash($password, PASSWORD_BCRYPT, ['cost' => self::BCRYPT_COST]);
 
         return $this->db->insert('users', [
+            'username' => trim($username),
             'email' => strtolower(trim($email)),
             'password_hash' => $passwordHash,
-            'display_name' => $displayName ? trim($displayName) : null,
+            'display_name' => trim($username), // Username is also the display name
         ]);
     }
 
@@ -54,6 +55,17 @@ class User
     }
 
     /**
+     * Find user by username
+     */
+    public function findByUsername(string $username): ?array
+    {
+        return $this->db->fetchOne(
+            'SELECT * FROM users WHERE username = ?',
+            [trim($username)]
+        );
+    }
+
+    /**
      * Verify user password (timing-safe comparison via password_verify)
      */
     public function verifyPassword(array $user, string $password): bool
@@ -67,6 +79,14 @@ class User
     public function emailExists(string $email): bool
     {
         return $this->findByEmail($email) !== null;
+    }
+
+    /**
+     * Check if username already exists
+     */
+    public function usernameExists(string $username): bool
+    {
+        return $this->findByUsername($username) !== null;
     }
 
     /**
@@ -128,7 +148,7 @@ class User
     public function getAll(int $limit = 100, int $offset = 0): array
     {
         return $this->db->fetchAll(
-            'SELECT id, email, display_name, role, is_active, created_at, last_login_at FROM users ORDER BY created_at DESC LIMIT ? OFFSET ?',
+            'SELECT id, username, email, display_name, role, is_active, created_at, last_login_at FROM users ORDER BY created_at DESC LIMIT ? OFFSET ?',
             [$limit, $offset]
         );
     }

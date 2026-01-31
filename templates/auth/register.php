@@ -13,6 +13,22 @@ $e = fn($v) => OutputEncoder::html($v ?? '');
             <?= $csrfField ?>
 
             <div class="form-group">
+                <label for="username">Username</label>
+                <input
+                    type="text"
+                    id="username"
+                    name="username"
+                    value="<?= $e($username ?? '') ?>"
+                    required
+                    autofocus
+                    autocomplete="username"
+                    pattern="[a-zA-Z0-9_-]{3,50}"
+                    title="3-50 characters: letters, numbers, underscores, or hyphens"
+                >
+                <small>3-50 characters: letters, numbers, underscores, or hyphens. Cannot be changed later.</small>
+            </div>
+
+            <div class="form-group">
                 <label for="email">Email Address</label>
                 <input
                     type="email"
@@ -20,20 +36,9 @@ $e = fn($v) => OutputEncoder::html($v ?? '');
                     name="email"
                     value="<?= $e($email ?? '') ?>"
                     required
-                    autofocus
                     autocomplete="email"
                 >
-            </div>
-
-            <div class="form-group">
-                <label for="display_name">Display Name (optional)</label>
-                <input
-                    type="text"
-                    id="display_name"
-                    name="display_name"
-                    value="<?= $e($displayName ?? '') ?>"
-                    autocomplete="name"
-                >
+                <small>Can be changed later in preferences</small>
             </div>
 
             <div class="form-group">

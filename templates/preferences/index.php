@@ -27,6 +27,7 @@ $error = $_GET['error'] ?? '';
             'password_mismatch' => 'New passwords do not match.',
             'password_short' => 'Password must be at least 8 characters.',
             'password_wrong' => 'Current password is incorrect.',
+            'email_exists' => 'Email address is already in use by another account.',
         ];
         echo $e($errorMessages[$error] ?? 'An error occurred.');
         ?>
@@ -40,15 +41,16 @@ $error = $_GET['error'] ?? '';
                 <?= $csrfField ?>
 
                 <div class="form-group">
-                    <label for="display_name">Display Name</label>
-                    <input type="text" id="display_name" name="display_name"
-                           value="<?= $e($currentUser['display_name'] ?? '') ?>">
+                    <label>Username</label>
+                    <input type="text" value="<?= $e($currentUser['username'] ?? $currentUser['display_name'] ?? '') ?>" disabled>
+                    <small>Username cannot be changed</small>
                 </div>
 
                 <div class="form-group">
-                    <label>Email Address</label>
-                    <input type="email" value="<?= $e($currentUser['email']) ?>" disabled>
-                    <small>Email cannot be changed</small>
+                    <label for="email">Email Address</label>
+                    <input type="email" id="email" name="email"
+                           value="<?= $e($currentUser['email']) ?>">
+                    <small>Email can be updated</small>
                 </div>
 
                 <div class="form-group">

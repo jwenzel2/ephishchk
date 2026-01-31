@@ -37,36 +37,27 @@ class AuthController extends BaseController
             return $this->redirect('/');
         }
 
-        $email = InputSanitizer::string($this->getPost('email', ''));
+        $username = InputSanitizer::string($this->getPost('username', ''));
         $password = $this->getPost('password', '');
 
         // Validate input
-        if (empty($email) || empty($password)) {
+        if (empty($username) || empty($password)) {
             return $this->render('auth/login', [
                 'title' => 'Login',
-                'error' => 'Please enter your email and password',
-                'email' => $email,
-            ]);
-        }
-
-        // Validate email format
-        if (!InputSanitizer::validateEmail($email)) {
-            return $this->render('auth/login', [
-                'title' => 'Login',
-                'error' => 'Please enter a valid email address',
-                'email' => $email,
+                'error' => 'Please enter your username and password',
+                'username' => $username,
             ]);
         }
 
         // Attempt login
-        if ($this->auth()->attempt($email, $password)) {
+        if ($this->auth()->attemptUsername($username, $password)) {
             return $this->redirect('/');
         }
 
         return $this->render('auth/login', [
             'title' => 'Login',
-            'error' => 'Invalid email or password',
-            'email' => $email,
+            'error' => 'Invalid username or password',
+            'username' => $username,
         ]);
     }
 
@@ -95,18 +86,28 @@ class AuthController extends BaseController
             return $this->redirect('/');
         }
 
+        $username = InputSanitizer::string($this->getPost('username', ''));
         $email = InputSanitizer::string($this->getPost('email', ''));
         $password = $this->getPost('password', '');
         $passwordConfirm = $this->getPost('password_confirm', '');
-        $displayName = InputSanitizer::string($this->getPost('display_name', ''));
 
         // Validate input
-        if (empty($email) || empty($password)) {
+        if (empty($username) || empty($email) || empty($password)) {
             return $this->render('auth/register', [
                 'title' => 'Register',
-                'error' => 'Please enter your email and password',
+                'error' => 'Please fill in all required fields',
+                'username' => $username,
                 'email' => $email,
-                'displayName' => $displayName,
+            ]);
+        }
+
+        // Validate username format (alphanumeric, underscores, hyphens, 3-50 chars)
+        if (!preg_match('/^[a-zA-Z0-9_-]{3,50}$/', $username)) {
+            return $this->render('auth/register', [
+                'title' => 'Register',
+                'error' => 'Username must be 3-50 characters and contain only letters, numbers, underscores, or hyphens',
+                'username' => $username,
+                'email' => $email,
             ]);
         }
 
@@ -115,8 +116,8 @@ class AuthController extends BaseController
             return $this->render('auth/register', [
                 'title' => 'Register',
                 'error' => 'Please enter a valid email address',
+                'username' => $username,
                 'email' => $email,
-                'displayName' => $displayName,
             ]);
         }
 
@@ -125,8 +126,8 @@ class AuthController extends BaseController
             return $this->render('auth/register', [
                 'title' => 'Register',
                 'error' => 'Password must be at least 8 characters long',
+                'username' => $username,
                 'email' => $email,
-                'displayName' => $displayName,
             ]);
         }
 
@@ -135,20 +136,20 @@ class AuthController extends BaseController
             return $this->render('auth/register', [
                 'title' => 'Register',
                 'error' => 'Passwords do not match',
+                'username' => $username,
                 'email' => $email,
-                'displayName' => $displayName,
             ]);
         }
 
         // Attempt registration
-        $result = $this->auth()->register($email, $password, $displayName ?: null);
+        $result = $this->auth()->registerWithUsername($username, $email, $password);
 
         if (isset($result['error'])) {
             return $this->render('auth/register', [
                 'title' => 'Register',
                 'error' => $result['error'],
+                'username' => $username,
                 'email' => $email,
-                'displayName' => $displayName,
             ]);
         }
 
