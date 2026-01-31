@@ -11,7 +11,6 @@ class Logger
 {
     private static ?Logger $instance = null;
     private string $logPath;
-    private string $logFile;
     private bool $debugMode;
 
     public const LEVEL_DEBUG = 'DEBUG';
@@ -24,7 +23,6 @@ class Logger
     {
         $this->logPath = rtrim($logPath, '/\\');
         $this->debugMode = $debugMode;
-        $this->logFile = $this->logPath . '/app_' . date('Y-m-d') . '.log';
 
         // Ensure log directory exists
         if (!is_dir($this->logPath)) {
@@ -122,8 +120,9 @@ class Logger
             $contextStr
         );
 
-        // Write to file
-        file_put_contents($this->logFile, $logLine, FILE_APPEND | LOCK_EX);
+        // Write to file (calculate log file path dynamically based on current date)
+        $logFile = $this->logPath . '/app_' . date('Y-m-d') . '.log';
+        file_put_contents($logFile, $logLine, FILE_APPEND | LOCK_EX);
 
         // Also write to PHP error log for critical errors
         if ($level === self::LEVEL_CRITICAL || $level === self::LEVEL_ERROR) {
@@ -136,7 +135,7 @@ class Logger
      */
     public function getLogFile(): string
     {
-        return $this->logFile;
+        return $this->logPath . '/app_' . date('Y-m-d') . '.log';
     }
 
     /**
@@ -144,11 +143,12 @@ class Logger
      */
     public function getRecentLogs(int $lines = 100): array
     {
-        if (!file_exists($this->logFile)) {
+        $logFile = $this->getLogFile();
+        if (!file_exists($logFile)) {
             return [];
         }
 
-        $file = new \SplFileObject($this->logFile, 'r');
+        $file = new \SplFileObject($logFile, 'r');
         $file->seek(PHP_INT_MAX);
         $totalLines = $file->key();
 
