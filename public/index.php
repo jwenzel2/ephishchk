@@ -38,6 +38,10 @@ $dotenv->safeLoad();
 // Load configuration
 $config = require BASE_PATH . '/config/app.php';
 
+// Set timezone EARLY - before any logging happens
+// This will be overridden later by database settings if they exist
+date_default_timezone_set($config['timezone'] ?? 'America/Chicago');
+
 // Initialize logger with debug mode
 $logger = Logger::getInstance($config['paths']['logs'] ?? $logPath, $config['debug'] ?? true);
 
@@ -56,9 +60,6 @@ if ($config['debug']) {
     ini_set('display_errors', '0');
     ini_set('log_errors', '1');
 }
-
-// Set timezone
-date_default_timezone_set($config['timezone'] ?? 'UTC');
 
 // Start session with secure settings
 if (session_status() === PHP_SESSION_NONE) {

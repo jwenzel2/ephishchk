@@ -16,8 +16,8 @@ return [
     // Environment (development, production)
     'env' => $_ENV['APP_ENV'] ?? 'production',
 
-    // Timezone
-    'timezone' => $_ENV['APP_TIMEZONE'] ?? 'UTC',
+    // Timezone (default for server logs before database settings are loaded)
+    'timezone' => $_ENV['APP_TIMEZONE'] ?? 'America/Chicago',
 
     // Use secure cookies (requires HTTPS)
     'secure_cookies' => filter_var($_ENV['SECURE_COOKIES'] ?? false, FILTER_VALIDATE_BOOLEAN),
