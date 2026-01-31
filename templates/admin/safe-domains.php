@@ -138,7 +138,7 @@ $e = fn($v) => OutputEncoder::html($v ?? '');
                         <td>
                             <code class="domain-code"><?= $e($domain['domain']) ?></code>
                         </td>
-                        <td><?= $e($domain['added_by_email'] ?? 'System') ?></td>
+                        <td><?= $e($domain['added_by_username'] ?? 'System') ?></td>
                         <td><?= $e(date('M j, Y', strtotime($domain['created_at']))) ?></td>
                         <td><?= $e($domain['notes'] ?? '-') ?></td>
                         <td class="actions">
