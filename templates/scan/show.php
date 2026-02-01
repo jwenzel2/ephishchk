@@ -96,6 +96,49 @@ if (($scan['risk_score'] ?? 0) >= 50) {
         <h2>Email Headers</h2>
         <p class="section-desc">Key headers extracted from the email for phishing detection</p>
 
+        <?php
+        // Display Authentication status if available
+        $authStatus = $resultsByType['header']['details']['auth_status'] ?? null;
+        if ($authStatus):
+            $authClass = match($authStatus['status']) {
+                'pass' => 'auth-pass',
+                'fail' => 'auth-fail',
+                'partial' => 'auth-partial',
+                default => 'auth-none'
+            };
+            $authIcon = match($authStatus['status']) {
+                'pass' => '✓',
+                'fail' => '✗',
+                'partial' => '⚠',
+                default => '?'
+            };
+        ?>
+        <div class="authentication-status <?= $authClass ?>">
+            <div class="auth-header">
+                <span class="auth-icon"><?= $authIcon ?></span>
+                <span class="auth-label">Authentication</span>
+                <span class="auth-message"><?= $e($authStatus['message']) ?></span>
+            </div>
+            <div class="auth-details">
+                <?php if ($authStatus['spf'] !== null): ?>
+                    <span class="auth-detail">
+                        <strong>SPF:</strong> <?= $e(strtoupper($authStatus['spf'])) ?>
+                    </span>
+                <?php endif; ?>
+                <?php if ($authStatus['dkim'] !== null): ?>
+                    <span class="auth-detail">
+                        <strong>DKIM:</strong> <?= $e(strtoupper($authStatus['dkim'])) ?>
+                    </span>
+                <?php endif; ?>
+                <?php if ($authStatus['dmarc'] !== null): ?>
+                    <span class="auth-detail">
+                        <strong>DMARC:</strong> <?= $e(strtoupper($authStatus['dmarc'])) ?>
+                    </span>
+                <?php endif; ?>
+            </div>
+        </div>
+        <?php endif; ?>
+
         <div class="headers-grid">
             <?php
             // Define which headers to show prominently and their warning conditions

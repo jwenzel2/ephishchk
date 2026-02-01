@@ -54,10 +54,12 @@ class HeaderAnalyzerService
         }
 
         // Check authentication failures in headers
+        $authStatus = null;
         if ($this->suspiciousPatterns['authentication_failures']) {
             $authFindings = $this->checkAuthenticationResults($email);
             $findings = array_merge($findings, $authFindings['findings']);
             $score += $authFindings['score'];
+            $authStatus = $authFindings['auth_status'] ?? null;
         }
 
         // Check received headers for unusual routing
@@ -82,11 +84,18 @@ class HeaderAnalyzerService
         // Normalize score to 0-100
         $score = min(100, max(0, $score));
 
-        return [
+        $result = [
             'score' => $score,
             'findings' => $findings,
             'summary' => $this->generateSummary($findings, $score),
         ];
+
+        // Include authentication status if available
+        if ($authStatus !== null) {
+            $result['auth_status'] = $authStatus;
+        }
+
+        return $result;
     }
 
     /**
@@ -166,11 +175,18 @@ class HeaderAnalyzerService
                 'message' => 'No Authentication-Results header found',
                 'details' => 'This header is added by receiving mail servers',
             ];
-            return ['findings' => $findings, 'score' => $score];
+            return [
+                'findings' => $findings,
+                'score' => $score,
+                'auth_status' => null,
+            ];
         }
 
         // Parse authentication results
         $results = $this->parseAuthenticationResults($authResults);
+
+        // Calculate overall authentication status
+        $authStatus = $this->calculateAuthenticationStatus($results);
 
         // Check SPF result
         if (isset($results['spf'])) {
@@ -211,7 +227,11 @@ class HeaderAnalyzerService
             }
         }
 
-        return ['findings' => $findings, 'score' => $score];
+        return [
+            'findings' => $findings,
+            'score' => $score,
+            'auth_status' => $authStatus,
+        ];
     }
 
     /**
@@ -419,6 +439,78 @@ class HeaderAnalyzerService
         }
 
         return $results;
+    }
+
+    /**
+     * Calculate overall authentication status
+     * Returns array with status ('pass', 'partial', 'fail', 'none') and details
+     */
+    private function calculateAuthenticationStatus(array $authResults): array
+    {
+        $spf = $authResults['spf'] ?? null;
+        $dkim = $authResults['dkim'] ?? null;
+        $dmarc = $authResults['dmarc'] ?? null;
+
+        // No authentication results available
+        if ($spf === null && $dkim === null && $dmarc === null) {
+            return [
+                'status' => 'none',
+                'message' => 'No authentication results available',
+                'spf' => null,
+                'dkim' => null,
+                'dmarc' => null,
+            ];
+        }
+
+        // If DMARC fails, authentication failed regardless of other checks
+        if ($dmarc === 'fail') {
+            return [
+                'status' => 'fail',
+                'message' => 'Authentication failed',
+                'spf' => $spf,
+                'dkim' => $dkim,
+                'dmarc' => $dmarc,
+            ];
+        }
+
+        // If all three pass, authentication passed
+        if ($spf === 'pass' && $dkim === 'pass' && $dmarc === 'pass') {
+            return [
+                'status' => 'pass',
+                'message' => 'Authentication passed',
+                'spf' => $spf,
+                'dkim' => $dkim,
+                'dmarc' => $dmarc,
+            ];
+        }
+
+        // If DMARC passes but SPF or DKIM fail (but not both)
+        if ($dmarc === 'pass') {
+            $spfFailed = ($spf === 'fail' || $spf === 'softfail');
+            $dkimFailed = ($dkim === 'fail');
+            $spfPassed = ($spf === 'pass');
+            $dkimPassed = ($dkim === 'pass');
+
+            // If one passed and one failed, it's partial
+            if (($spfFailed && $dkimPassed) || ($dkimFailed && $spfPassed)) {
+                return [
+                    'status' => 'partial',
+                    'message' => 'Authentication partial',
+                    'spf' => $spf,
+                    'dkim' => $dkim,
+                    'dmarc' => $dmarc,
+                ];
+            }
+        }
+
+        // Default to partial for any other combination
+        return [
+            'status' => 'partial',
+            'message' => 'Authentication partial',
+            'spf' => $spf,
+            'dkim' => $dkim,
+            'dmarc' => $dmarc,
+        ];
     }
 
     /**

@@ -958,6 +958,76 @@ main {
     font-size: 0.875rem;
 }
 
+/* Authentication Status */
+.authentication-status {
+    padding: 1rem;
+    border-radius: 6px;
+    margin-bottom: 1.5rem;
+    border: 2px solid;
+}
+
+.authentication-status.auth-pass {
+    background-color: #d4edda;
+    border-color: #28a745;
+    color: #155724;
+}
+
+.authentication-status.auth-fail {
+    background-color: #f8d7da;
+    border-color: #dc3545;
+    color: #721c24;
+}
+
+.authentication-status.auth-partial {
+    background-color: #fff3cd;
+    border-color: #ffc107;
+    color: #856404;
+}
+
+.authentication-status.auth-none {
+    background-color: #e2e3e5;
+    border-color: #6c757d;
+    color: #383d41;
+}
+
+.auth-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.auth-icon {
+    font-size: 1.5rem;
+    line-height: 1;
+}
+
+.auth-label {
+    font-weight: 600;
+}
+
+.auth-message {
+    font-weight: 600;
+}
+
+.auth-details {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    font-size: 0.9rem;
+}
+
+.auth-detail {
+    display: inline-block;
+}
+
+.auth-detail strong {
+    font-weight: 600;
+    margin-right: 0.25rem;
+}
+
 .headers-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
