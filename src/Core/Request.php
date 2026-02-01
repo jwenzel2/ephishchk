@@ -155,6 +155,46 @@ class Request
         return $this->server['REMOTE_ADDR'] ?? '127.0.0.1';
     }
 
+    public function isSecure(): bool
+    {
+        // Check HTTPS server variable
+        if (!empty($this->server['HTTPS']) && $this->server['HTTPS'] !== 'off') {
+            return true;
+        }
+
+        // Check X-Forwarded-Proto header (behind reverse proxy)
+        $forwardedProto = $this->getHeader('X-Forwarded-Proto');
+        if ($forwardedProto === 'https') {
+            return true;
+        }
+
+        // Check X-Forwarded-Ssl header
+        $forwardedSsl = $this->getHeader('X-Forwarded-Ssl');
+        if ($forwardedSsl === 'on') {
+            return true;
+        }
+
+        // Check if port is 443 (standard HTTPS port)
+        if (($this->server['SERVER_PORT'] ?? 80) == 443) {
+            return true;
+        }
+
+        return false;
+    }
+
+    public function getFullUrl(): string
+    {
+        $scheme = $this->isSecure() ? 'https' : 'http';
+        $host = $this->server['HTTP_HOST'] ?? $this->server['SERVER_NAME'] ?? 'localhost';
+        return $scheme . '://' . $host . $this->uri;
+    }
+
+    public function getHttpsUrl(): string
+    {
+        $host = $this->server['HTTP_HOST'] ?? $this->server['SERVER_NAME'] ?? 'localhost';
+        return 'https://' . $host . $this->uri;
+    }
+
     public function setAttribute(string $key, mixed $value): void
     {
         $this->attributes[$key] = $value;

@@ -204,6 +204,20 @@ $saved = isset($_GET['saved']);
         </div>
 
         <div class="card">
+            <h2>Security Settings</h2>
+            <p class="card-description">Configure security and access controls.</p>
+
+            <div class="form-group checkbox-group">
+                <label>
+                    <input type="checkbox" name="require_https" value="1"
+                           <?= ($settings['require_https']['value'] ?? false) ? 'checked' : '' ?>>
+                    Require HTTPS for all requests
+                </label>
+                <small class="warning-text">⚠️ Only enable after SSL/TLS is properly configured. Enabling without HTTPS will make the site inaccessible.</small>
+            </div>
+        </div>
+
+        <div class="card">
             <h2>Scan Settings</h2>
 
             <div class="form-group">

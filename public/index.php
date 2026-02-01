@@ -103,6 +103,26 @@ try {
     }
 
     $request = Request::createFromGlobals();
+
+    // Enforce HTTPS if required (before routing)
+    try {
+        $db = $app->getDatabase();
+        $httpsRow = $db->fetchOne('SELECT setting_value FROM settings WHERE setting_key = ?', ['require_https']);
+        $requireHttps = ($httpsRow && $httpsRow['setting_value'] === '1');
+
+        if ($requireHttps && !$request->isSecure()) {
+            $httpsUrl = $request->getHttpsUrl();
+            $logger->info('Redirecting HTTP to HTTPS', [
+                'from' => $request->getFullUrl(),
+                'to' => $httpsUrl
+            ]);
+            header('Location: ' . $httpsUrl, true, 301);
+            exit;
+        }
+    } catch (Throwable $e) {
+        // Database not ready or settings table doesn't exist yet - skip HTTPS enforcement
+        $logger->debug('Could not check HTTPS requirement: ' . $e->getMessage());
+    }
     $response = $app->handle($request);
     $response->send();
 
