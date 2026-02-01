@@ -451,7 +451,7 @@ class HeaderAnalyzerService
         $dkim = $authResults['dkim'] ?? null;
         $dmarc = $authResults['dmarc'] ?? null;
 
-        // No authentication results available
+        // No authentication results available at all
         if ($spf === null && $dkim === null && $dmarc === null) {
             return [
                 'status' => 'none',
@@ -462,11 +462,22 @@ class HeaderAnalyzerService
             ];
         }
 
+        // If DMARC is missing, treat as authentication failed
+        if ($dmarc === null) {
+            return [
+                'status' => 'fail',
+                'message' => 'Failed',
+                'spf' => $spf,
+                'dkim' => $dkim,
+                'dmarc' => 'none',
+            ];
+        }
+
         // If DMARC fails, authentication failed regardless of other checks
         if ($dmarc === 'fail') {
             return [
                 'status' => 'fail',
-                'message' => 'Authentication failed',
+                'message' => 'Failed',
                 'spf' => $spf,
                 'dkim' => $dkim,
                 'dmarc' => $dmarc,
@@ -477,7 +488,7 @@ class HeaderAnalyzerService
         if ($spf === 'pass' && $dkim === 'pass' && $dmarc === 'pass') {
             return [
                 'status' => 'pass',
-                'message' => 'Authentication passed',
+                'message' => 'Passed',
                 'spf' => $spf,
                 'dkim' => $dkim,
                 'dmarc' => $dmarc,
@@ -495,7 +506,7 @@ class HeaderAnalyzerService
             if (($spfFailed && $dkimPassed) || ($dkimFailed && $spfPassed)) {
                 return [
                     'status' => 'partial',
-                    'message' => 'Authentication partial',
+                    'message' => 'Partial',
                     'spf' => $spf,
                     'dkim' => $dkim,
                     'dmarc' => $dmarc,
@@ -506,7 +517,7 @@ class HeaderAnalyzerService
         // Default to partial for any other combination
         return [
             'status' => 'partial',
-            'message' => 'Authentication partial',
+            'message' => 'Partial',
             'spf' => $spf,
             'dkim' => $dkim,
             'dmarc' => $dmarc,

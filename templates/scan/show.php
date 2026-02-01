@@ -116,7 +116,7 @@ if (($scan['risk_score'] ?? 0) >= 50) {
         <div class="authentication-status <?= $authClass ?>">
             <div class="auth-header">
                 <span class="auth-icon"><?= $authIcon ?></span>
-                <span class="auth-label">Authentication</span>
+                <span class="auth-label">Authentication:</span>
                 <span class="auth-message"><?= $e($authStatus['message']) ?></span>
             </div>
             <div class="auth-details">
@@ -130,11 +130,9 @@ if (($scan['risk_score'] ?? 0) >= 50) {
                         <strong>DKIM:</strong> <?= $e(strtoupper($authStatus['dkim'])) ?>
                     </span>
                 <?php endif; ?>
-                <?php if ($authStatus['dmarc'] !== null): ?>
-                    <span class="auth-detail">
-                        <strong>DMARC:</strong> <?= $e(strtoupper($authStatus['dmarc'])) ?>
-                    </span>
-                <?php endif; ?>
+                <span class="auth-detail">
+                    <strong>DMARC:</strong> <?= $e(strtoupper($authStatus['dmarc'] ?? 'none')) ?>
+                </span>
             </div>
         </div>
         <?php endif; ?>
