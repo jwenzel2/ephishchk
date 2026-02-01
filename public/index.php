@@ -103,31 +103,6 @@ try {
     }
 
     $request = Request::createFromGlobals();
-
-    // Enforce HTTPS if required (before routing)
-    try {
-        $settingModel = new \Ephishchk\Models\Setting($app->getDatabase());
-        $requireHttps = $settingModel->get('require_https', false);
-
-        $logger->debug('HTTPS enforcement check', [
-            'require_https' => $requireHttps,
-            'is_secure' => $request->isSecure(),
-            'will_redirect' => ($requireHttps && !$request->isSecure())
-        ]);
-
-        if ($requireHttps && !$request->isSecure()) {
-            $httpsUrl = $request->getHttpsUrl();
-            $logger->info('Redirecting HTTP to HTTPS', [
-                'from' => $request->getFullUrl(),
-                'to' => $httpsUrl
-            ]);
-            header('Location: ' . $httpsUrl, true, 301);
-            exit;
-        }
-    } catch (Throwable $e) {
-        // Database not ready or settings table doesn't exist yet - skip HTTPS enforcement
-        $logger->debug('Could not check HTTPS requirement: ' . $e->getMessage());
-    }
     $response = $app->handle($request);
     $response->send();
 

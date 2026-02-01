@@ -88,10 +88,6 @@ class SettingsController extends BaseController
             date_default_timezone_set($timezone);
         }
 
-        // HTTPS requirement
-        $requireHttps = InputSanitizer::boolean($this->getPost('require_https', false));
-        $settingModel->set('require_https', $requireHttps, 'boolean');
-
         if ($this->isAjax()) {
             return $this->json(['success' => true, 'message' => 'Settings saved']);
         }
