@@ -91,21 +91,22 @@ try {
     // Create default admin user if not exists
     $adminCreated = false;
     try {
-        $stmt = $pdo->prepare("SELECT id FROM users WHERE email = ?");
-        $stmt->execute(['admin@admin.com']);
+        // Check if admin user already exists by username
+        $stmt = $pdo->prepare("SELECT id FROM users WHERE username = ? OR email = ?");
+        $stmt->execute(['Administrator', 'admin@admin.com']);
 
         if (!$stmt->fetch()) {
             $passwordHash = password_hash('admin', PASSWORD_BCRYPT, ['cost' => 12]);
             $stmt = $pdo->prepare("
-                INSERT INTO users (email, password_hash, display_name, is_active, role, created_at, updated_at)
-                VALUES (?, ?, ?, 1, 'admin', NOW(), NOW())
+                INSERT INTO users (username, email, password_hash, display_name, is_active, role, created_at, updated_at)
+                VALUES (?, ?, ?, ?, 1, 'admin', NOW(), NOW())
             ");
-            $stmt->execute(['admin@admin.com', $passwordHash, 'Administrator']);
+            $stmt->execute(['Administrator', 'admin@admin.com', $passwordHash, 'Administrator']);
             $adminCreated = true;
-            echo "→ Created default admin user (admin@admin.com / admin)\n";
+            echo "→ Created default admin user (username: Administrator, password: admin)\n";
         }
     } catch (PDOException $e) {
-        // Role column might not exist yet - that's ok
+        // Username column or role column might not exist yet - that's ok
     }
 
     echo "\n============================\n";
