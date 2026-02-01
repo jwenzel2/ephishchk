@@ -106,9 +106,14 @@ try {
 
     // Enforce HTTPS if required (before routing)
     try {
-        $db = $app->getDatabase();
-        $httpsRow = $db->fetchOne('SELECT setting_value FROM settings WHERE setting_key = ?', ['require_https']);
-        $requireHttps = ($httpsRow && $httpsRow['setting_value'] === '1');
+        $settingModel = new \Ephishchk\Models\Setting($app->getDatabase());
+        $requireHttps = $settingModel->get('require_https', false);
+
+        $logger->debug('HTTPS enforcement check', [
+            'require_https' => $requireHttps,
+            'is_secure' => $request->isSecure(),
+            'will_redirect' => ($requireHttps && !$request->isSecure())
+        ]);
 
         if ($requireHttps && !$request->isSecure()) {
             $httpsUrl = $request->getHttpsUrl();
