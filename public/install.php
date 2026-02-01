@@ -10,6 +10,10 @@
  * 4. Runs database migrations
  * 5. Configures VirusTotal API (optional)
  * 6. Creates .env configuration file
+ *
+ * ⚠️ SECURITY WARNING:
+ * DELETE THIS FILE (public/install.php) IMMEDIATELY AFTER INSTALLATION!
+ * Leaving this file accessible is a serious security risk.
  */
 
 declare(strict_types=1);
@@ -1248,10 +1252,14 @@ $isInstalled = file_exists(BASE_PATH . '/storage/.installed');
             const result = await makeRequest('finalize');
 
             if (result.success) {
-                showStatus('finalize-status', result.message + ' Redirecting...', 'success');
+                const securityWarning = '<br><br><strong style="color: #dc2626;">⚠️ SECURITY WARNING:</strong><br>' +
+                    'For security reasons, you MUST delete <code>public/install.php</code> from your server immediately after installation!<br>' +
+                    'Leaving this file accessible could allow unauthorized users to reconfigure your application.<br><br>' +
+                    'Redirecting in 10 seconds...';
+                showStatus('finalize-status', result.message + securityWarning, 'success');
                 setTimeout(() => {
                     window.location.href = result.redirect || '/';
-                }, 2000);
+                }, 10000);
             } else {
                 showStatus('finalize-status', result.error, 'error');
                 this.disabled = false;
