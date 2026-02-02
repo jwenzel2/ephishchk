@@ -373,6 +373,8 @@ function createDefaultAdmin(PDO $pdo): bool {
         $stmt->execute(['Administrator', 'admin@admin.com']);
 
         if ($stmt->fetch()) {
+            // Admin exists, but check if we need to populate safe domains
+            populateSafeDomains($pdo);
             return false; // Already exists
         }
 
@@ -385,11 +387,65 @@ function createDefaultAdmin(PDO $pdo): bool {
         ");
         $stmt->execute(['Administrator', 'admin@admin.com', $passwordHash, 'Administrator']);
 
+        // Get the admin user ID
+        $adminId = (int)$pdo->lastInsertId();
+
+        // Pre-populate safe domains
+        populateSafeDomains($pdo, $adminId);
+
         return true;
 
     } catch (PDOException $e) {
         // Table might not exist yet, username column missing, or role column missing - that's ok
         return false;
+    }
+}
+
+/**
+ * Populate safe domains table with common legitimate domains
+ */
+function populateSafeDomains(PDO $pdo, int $adminId = 1): void {
+    try {
+        // Check if safe_domains table exists and already has data
+        $stmt = $pdo->query("SELECT COUNT(*) FROM safe_domains");
+        $count = $stmt->fetchColumn();
+
+        if ($count > 0) {
+            return; // Already populated
+        }
+
+        // Pre-populate with common legitimate domains
+        $domains = [
+            ['google.com', 'Pre-populated: Major search engine and tech company'],
+            ['microsoft.com', 'Pre-populated: Major software company'],
+            ['apple.com', 'Pre-populated: Major tech company'],
+            ['amazon.com', 'Pre-populated: Major e-commerce platform'],
+            ['paypal.com', 'Pre-populated: Payment processing service'],
+            ['facebook.com', 'Pre-populated: Social media platform'],
+            ['linkedin.com', 'Pre-populated: Professional networking platform'],
+            ['twitter.com', 'Pre-populated: Social media platform'],
+            ['instagram.com', 'Pre-populated: Social media platform'],
+            ['netflix.com', 'Pre-populated: Streaming service'],
+            ['dropbox.com', 'Pre-populated: Cloud storage service'],
+            ['github.com', 'Pre-populated: Software development platform'],
+            ['yahoo.com', 'Pre-populated: Web services provider'],
+            ['ebay.com', 'Pre-populated: E-commerce platform'],
+            ['wells-fargo.com', 'Pre-populated: Banking institution'],
+            ['chase.com', 'Pre-populated: Banking institution'],
+            ['bankofamerica.com', 'Pre-populated: Banking institution'],
+        ];
+
+        $stmt = $pdo->prepare("
+            INSERT INTO safe_domains (domain, added_by_user_id, added_by_username, notes)
+            VALUES (?, ?, 'Administrator', ?)
+        ");
+
+        foreach ($domains as $domain) {
+            $stmt->execute([$domain[0], $adminId, $domain[1]]);
+        }
+
+    } catch (PDOException $e) {
+        // Table might not exist yet - that's ok
     }
 }
 

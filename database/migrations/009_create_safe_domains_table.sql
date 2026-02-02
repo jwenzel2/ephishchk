@@ -19,22 +19,4 @@ CREATE TABLE IF NOT EXISTS safe_domains (
         ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Pre-populate with common legitimate domains that are frequently targeted by typosquatting
-INSERT INTO safe_domains (domain, added_by_user_id, added_by_username, notes) VALUES
-    ('google.com', 1, 'admin', 'Pre-populated: Major search engine and tech company'),
-    ('microsoft.com', 1, 'admin', 'Pre-populated: Major software company'),
-    ('apple.com', 1, 'admin', 'Pre-populated: Major tech company'),
-    ('amazon.com', 1, 'admin', 'Pre-populated: Major e-commerce platform'),
-    ('paypal.com', 1, 'admin', 'Pre-populated: Payment processing service'),
-    ('facebook.com', 1, 'admin', 'Pre-populated: Social media platform'),
-    ('linkedin.com', 1, 'admin', 'Pre-populated: Professional networking platform'),
-    ('twitter.com', 1, 'admin', 'Pre-populated: Social media platform'),
-    ('instagram.com', 1, 'admin', 'Pre-populated: Social media platform'),
-    ('netflix.com', 1, 'admin', 'Pre-populated: Streaming service'),
-    ('dropbox.com', 1, 'admin', 'Pre-populated: Cloud storage service'),
-    ('github.com', 1, 'admin', 'Pre-populated: Software development platform'),
-    ('yahoo.com', 1, 'admin', 'Pre-populated: Web services provider'),
-    ('ebay.com', 1, 'admin', 'Pre-populated: E-commerce platform'),
-    ('wells-fargo.com', 1, 'admin', 'Pre-populated: Banking institution'),
-    ('chase.com', 1, 'admin', 'Pre-populated: Banking institution'),
-    ('bankofamerica.com', 1, 'admin', 'Pre-populated: Banking institution');
+-- Note: Pre-populated domains are added by the installer after admin user creation
