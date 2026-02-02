@@ -41,28 +41,12 @@ ADD CONSTRAINT uk_users_username UNIQUE (username);
 -- Step 5: Add index on username for performance
 CREATE INDEX idx_username ON users(username);
 
--- Step 6: Add username column to safe_domains table
-ALTER TABLE safe_domains
-ADD COLUMN added_by_username VARCHAR(50) NULL
-AFTER added_by_user_id;
-
--- Step 7: Migrate safe_domains to use username instead of email
+-- Step 6: Update safe_domains usernames to match current user data
+-- Note: added_by_username column already exists from migration 009
 UPDATE safe_domains sd
 LEFT JOIN users u ON sd.added_by_user_id = u.id
-SET sd.added_by_username = u.username
-WHERE u.username IS NOT NULL;
-
--- Step 8: Set 'System' for entries without a user
-UPDATE safe_domains
-SET added_by_username = 'System'
-WHERE added_by_username IS NULL;
-
--- Step 9: Make added_by_username NOT NULL
-ALTER TABLE safe_domains
-MODIFY COLUMN added_by_username VARCHAR(50) NOT NULL;
-
--- Step 10: Add index on added_by_username for performance
-CREATE INDEX idx_added_by_username ON safe_domains(added_by_username);
+SET sd.added_by_username = COALESCE(u.username, 'System')
+WHERE u.username IS NOT NULL OR sd.added_by_username = 'admin';
 
 -- Migration complete!
 -- Notes:
