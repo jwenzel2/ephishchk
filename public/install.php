@@ -24,7 +24,7 @@ set_time_limit(300);
 // Installation configuration
 define('INSTALL_VERSION', '1.0.0');
 define('MIN_PHP_VERSION', '8.1.0');
-define('BASE_PATH', __DIR__);
+define('BASE_PATH', realpath(__DIR__ . '/..'));
 
 // Required PHP extensions
 $requiredExtensions = [
@@ -1183,7 +1183,7 @@ $isInstalled = file_exists(BASE_PATH . '/storage/.installed');
 
             const composerClass = result.composer_installed ? 'pass' : 'fail';
             const composerIcon = result.composer_installed ? '✓' : '✗';
-            html += `<li><span class="check-icon ${composerClass}">${composerIcon}</span> Composer dependencies ${result.composer_installed ? 'installed' : 'not installed - run: composer install'}</li>`;
+            html += `<li><span class="check-icon ${composerClass}">${composerIcon}</span> Composer dependencies ${result.composer_installed ? 'installed' : 'not installed - run: composer install from the project root directory (not public/)'}</li>`;
 
             html += '</ul>';
             document.getElementById('filesystem-content').innerHTML = html;
@@ -1195,7 +1195,7 @@ $isInstalled = file_exists(BASE_PATH . '/storage/.installed');
                 showStatus('filesystem-status', 'Filesystem is ready!', 'success');
                 activateStep(2);
             } else if (!result.composer_installed) {
-                showStatus('filesystem-status', 'Please run "composer install" in the project directory.', 'error');
+                showStatus('filesystem-status', 'Please run "composer install" from the project root directory (the parent of public/, not public/ itself).', 'error');
             } else {
                 showStatus('filesystem-status', 'Please fix the directory permissions and try again.', 'error');
             }
