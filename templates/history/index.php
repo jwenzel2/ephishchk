@@ -56,7 +56,7 @@ $e = fn($v) => OutputEncoder::html($v);
                                 <span class="badge">-</span>
                             <?php endif; ?>
                         </td>
-                        <td><?= $e($scan['created_at']) ?></td>
+                        <td><?= $e(date('Y-m-d H:i:s', strtotime($scan['created_at']))) ?></td>
                         <td class="actions-cell">
                             <a href="/scan/<?= (int)$scan['id'] ?>" class="btn btn-small">View</a>
                             <form method="POST" action="/history/<?= (int)$scan['id'] ?>/delete" class="inline-form" onsubmit="return confirm('Delete this scan?')">

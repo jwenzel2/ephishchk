@@ -50,7 +50,7 @@ if (($scan['risk_score'] ?? 0) >= 50) {
             </div>
             <div class="summary-item">
                 <span class="label">Date</span>
-                <span class="value"><?= $e($scan['created_at']) ?></span>
+                <span class="value"><?= $e(date('Y-m-d H:i:s', strtotime($scan['created_at']))) ?></span>
             </div>
         </div>
 
