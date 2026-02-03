@@ -76,6 +76,12 @@ class PreferencesController extends BaseController
             $prefModel->set($userId, 'theme', $theme);
         }
 
+        // Time format preference
+        $timeFormat = $this->getPost('time_format', '24h');
+        if (in_array($timeFormat, ['24h', '12h'])) {
+            $prefModel->set($userId, 'time_format', $timeFormat);
+        }
+
         // Results per page
         $resultsPerPage = InputSanitizer::positiveInt($this->getPost('results_per_page'), 20);
         if ($resultsPerPage >= 10 && $resultsPerPage <= 100) {

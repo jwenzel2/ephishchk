@@ -115,6 +115,14 @@ $error = $_GET['error'] ?? '';
                     </select>
                 </div>
 
+                <div class="form-group">
+                    <label for="time_format">Time Format</label>
+                    <select id="time_format" name="time_format">
+                        <option value="24h" <?= ($preferences['time_format'] ?? '24h') === '24h' ? 'selected' : '' ?>>24-hour (14:25:14)</option>
+                        <option value="12h" <?= ($preferences['time_format'] ?? '24h') === '12h' ? 'selected' : '' ?>>12-hour (2:25:14 PM)</option>
+                    </select>
+                </div>
+
                 <div class="form-actions">
                     <button type="submit" class="btn btn-primary">Save Preferences</button>
                 </div>
