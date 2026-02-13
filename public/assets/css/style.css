@@ -1075,6 +1075,18 @@ main {
     word-break: break-all;
 }
 
+.header-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+}
+
+.header-actions .btn {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
+}
+
 .header-alert {
     display: inline-block;
     margin-top: 0.5rem;
@@ -1759,6 +1771,16 @@ main {
 
 .btn-safe-added:hover {
     background-color: var(--color-info);
+    transform: none;
+}
+
+.btn-malicious-added {
+    background-color: #b91c1c;
+    cursor: default;
+}
+
+.btn-malicious-added:hover {
+    background-color: #b91c1c;
     transform: none;
 }
 

@@ -197,6 +197,16 @@ if (($scan['risk_score'] ?? 0) >= 50) {
                 if (!isset($extractedHeaders[$headerKey])) continue;
                 $header = $extractedHeaders[$headerKey];
 
+                // Extract domain for quick add actions on key sender-related headers.
+                $headerDomain = '';
+                if (in_array($headerKey, ['from', 'reply_to', 'return_path'], true)) {
+                    $headerValue = strtolower(trim((string) ($header['value'] ?? '')));
+                    if (str_contains($headerValue, '@')) {
+                        $headerDomain = explode('@', $headerValue)[1] ?? '';
+                        $headerDomain = trim($headerDomain, " \t\n\r\0\x0B><");
+                    }
+                }
+
                 // Check if this header differs from 'from' (potential spoofing indicator)
                 $isDifferent = false;
                 $fromEmail = strtolower($extractedHeaders['from']['value'] ?? '');
@@ -215,6 +225,22 @@ if (($scan['risk_score'] ?? 0) >= 50) {
                 <div class="header-content">
                     <span class="header-label"><?= $e($header['label']) ?></span>
                     <span class="header-value"><?= $e($header['full']) ?></span>
+                    <?php if (($currentUser['role'] ?? 'user') === 'admin' && $headerDomain !== ''): ?>
+                        <div class="header-actions">
+                            <button class="btn btn-small btn-add-safe"
+                                    data-url="<?= $e($header['value'] ?? '') ?>"
+                                    data-domain="<?= $e($headerDomain) ?>"
+                                    onclick="addDomainToSafeList(this)">
+                                + Safe
+                            </button>
+                            <button class="btn btn-small btn-danger"
+                                    data-url="<?= $e($header['value'] ?? '') ?>"
+                                    data-domain="<?= $e($headerDomain) ?>"
+                                    onclick="addDomainToMaliciousList(this)">
+                                + Malicious
+                            </button>
+                        </div>
+                    <?php endif; ?>
                     <?php if ($isDifferent): ?>
                         <span class="header-alert">Domain differs from sender</span>
                     <?php endif; ?>
