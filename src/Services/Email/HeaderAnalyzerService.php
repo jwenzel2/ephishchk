@@ -14,6 +14,7 @@ class HeaderAnalyzerService
     private array $suspiciousPatterns = [];
     private ?TyposquattingDetectionService $typosquattingDetector = null;
     private array $safeDomains = [];
+    private array $maliciousDomains = [];
 
     public function __construct(
         array $config = [],
@@ -34,6 +35,14 @@ class HeaderAnalyzerService
     public function setSafeDomains(array $domains): void
     {
         $this->safeDomains = $domains;
+    }
+
+    /**
+     * Set malicious domains for confirmed phish detection
+     */
+    public function setMaliciousDomains(array $domains): void
+    {
+        $this->maliciousDomains = $domains;
     }
 
     /**
@@ -79,6 +88,13 @@ class HeaderAnalyzerService
             $typosquattingFindings = $this->checkHeaderTyposquatting($email);
             $findings = array_merge($findings, $typosquattingFindings['findings']);
             $score += $typosquattingFindings['score'];
+        }
+
+        // Check for malicious domains in headers
+        if (!empty($this->maliciousDomains)) {
+            $maliciousFindings = $this->checkMaliciousDomains($email);
+            $findings = array_merge($findings, $maliciousFindings['findings']);
+            $score += $maliciousFindings['score'];
         }
 
         // Normalize score to 0-100
@@ -416,6 +432,79 @@ class HeaderAnalyzerService
         }
 
         return ['findings' => $findings, 'score' => $score];
+    }
+
+    /**
+     * Check header domains against known malicious domains list
+     */
+    private function checkMaliciousDomains(ParsedEmail $email): array
+    {
+        $findings = [];
+        $score = 0;
+
+        $headerDomains = [
+            'from' => null,
+            'reply_to' => null,
+            'return_path' => null,
+        ];
+
+        $from = $email->getFrom();
+        if ($from && isset($from['email'])) {
+            $headerDomains['from'] = $this->extractDomain($from['email']);
+        }
+
+        $replyTo = $email->getReplyTo();
+        if ($replyTo && isset($replyTo['email'])) {
+            $headerDomains['reply_to'] = $this->extractDomain($replyTo['email']);
+        }
+
+        $returnPath = $email->getReturnPath();
+        if ($returnPath) {
+            $headerDomains['return_path'] = $this->extractDomain($returnPath);
+        }
+
+        $headerLabels = [
+            'from' => 'From',
+            'reply_to' => 'Reply-To',
+            'return_path' => 'Return-Path',
+        ];
+
+        foreach ($headerDomains as $headerField => $domain) {
+            if (!$domain) {
+                continue;
+            }
+
+            $matchedMalicious = $this->isDomainMalicious($domain);
+            if ($matchedMalicious !== null) {
+                $findings[] = [
+                    'type' => 'malicious_domain_match',
+                    'severity' => 'critical',
+                    'header_field' => $headerField,
+                    'message' => "{$headerLabels[$headerField]} domain matches known malicious domain: {$matchedMalicious}",
+                    'details' => "Domain '{$domain}' matches malicious domain '{$matchedMalicious}' - Confirmed Phish",
+                    'matched_malicious_domain' => $matchedMalicious,
+                ];
+                $score += 100;
+            }
+        }
+
+        return ['findings' => $findings, 'score' => $score];
+    }
+
+    /**
+     * Check if a domain matches any malicious domain (exact or subdomain match)
+     * Returns the matched malicious domain or null
+     */
+    private function isDomainMalicious(string $domain): ?string
+    {
+        $domain = strtolower($domain);
+        foreach ($this->maliciousDomains as $malicious) {
+            $malicious = strtolower($malicious);
+            if ($domain === $malicious || str_ends_with($domain, '.' . $malicious)) {
+                return $malicious;
+            }
+        }
+        return null;
     }
 
     /**

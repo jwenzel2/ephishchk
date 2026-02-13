@@ -71,4 +71,12 @@ return [
     ['POST', '/admin/safe-domains/add-from-scan', [AdminController::class, 'addDomainFromScan']],
     ['GET', '/admin/safe-domains/export', [AdminController::class, 'exportSafeDomains']],
     ['POST', '/admin/safe-domains/import', [AdminController::class, 'importSafeDomains']],
+
+    // Admin - Malicious Domains Management
+    ['GET', '/admin/malicious-domains', [AdminController::class, 'maliciousDomains']],
+    ['POST', '/admin/malicious-domains/add', [AdminController::class, 'addMaliciousDomain']],
+    ['POST', '/admin/malicious-domains/delete', [AdminController::class, 'deleteMaliciousDomain']],
+    ['POST', '/admin/malicious-domains/add-from-scan', [AdminController::class, 'addMaliciousDomainFromScan']],
+    ['GET', '/admin/malicious-domains/export', [AdminController::class, 'exportMaliciousDomains']],
+    ['POST', '/admin/malicious-domains/import', [AdminController::class, 'importMaliciousDomains']],
 ];

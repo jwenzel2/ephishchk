@@ -7,6 +7,7 @@ namespace Ephishchk\Controllers;
 use Ephishchk\Core\Response;
 use Ephishchk\Models\User;
 use Ephishchk\Models\SafeDomain;
+use Ephishchk\Models\MaliciousDomain;
 use Ephishchk\Security\InputSanitizer;
 
 /**
@@ -414,6 +415,263 @@ class AdminController extends BaseController
         }
 
         return $this->redirect('/admin/safe-domains?success=' . urlencode($message));
+    }
+
+    /**
+     * Malicious Domains Management Page
+     */
+    public function maliciousDomains(): Response
+    {
+        if ($redirect = $this->requireAdmin()) {
+            return $redirect;
+        }
+
+        $page = InputSanitizer::positiveInt($this->getQuery('page'), 1);
+        $perPage = 20;
+        $offset = ($page - 1) * $perPage;
+
+        $maliciousDomainModel = new MaliciousDomain($this->app->getDatabase());
+        $domains = $maliciousDomainModel->getAll($perPage, $offset);
+        $total = $maliciousDomainModel->count();
+        $totalPages = (int) ceil($total / $perPage);
+
+        $data = [
+            'title' => 'Malicious Domains Management',
+            'domains' => $domains,
+            'page' => $page,
+            'totalPages' => $totalPages,
+            'total' => $total,
+            'perPage' => $perPage,
+        ];
+
+        if ($error = $this->getQuery('error')) {
+            $data['error'] = $error;
+        }
+        if ($success = $this->getQuery('success')) {
+            $data['success'] = $success;
+        }
+
+        return $this->render('admin/malicious-domains', $data);
+    }
+
+    /**
+     * Add a malicious domain (from management page)
+     */
+    public function addMaliciousDomain(): Response
+    {
+        if ($redirect = $this->requireAdmin()) {
+            return $redirect;
+        }
+
+        $domain = InputSanitizer::string($this->getPost('domain', ''));
+        $notes = InputSanitizer::string($this->getPost('notes', ''));
+
+        if (empty($domain) || trim($domain) === '') {
+            if ($this->isAjax()) {
+                return $this->json(['error' => 'Domain is required'], 400);
+            }
+            return $this->redirect('/admin/malicious-domains');
+        }
+
+        $maliciousDomainModel = new MaliciousDomain($this->app->getDatabase());
+
+        if ($maliciousDomainModel->exists($domain)) {
+            if ($this->isAjax()) {
+                return $this->json(['error' => 'Domain already exists in malicious list'], 400);
+            }
+            return $this->redirect('/admin/malicious-domains?error=' . urlencode('Domain already exists'));
+        }
+
+        try {
+            $maliciousDomainModel->create($domain, $this->getUserId(), $notes);
+        } catch (\Exception $e) {
+            error_log("[MaliciousDomain] Failed to create domain: " . $e->getMessage());
+            if ($this->isAjax()) {
+                return $this->json(['error' => 'Failed to add domain: ' . $e->getMessage()], 500);
+            }
+            return $this->redirect('/admin/malicious-domains?error=' . urlencode('Failed to add domain'));
+        }
+
+        if ($this->isAjax()) {
+            return $this->json(['success' => true, 'message' => 'Domain added successfully']);
+        }
+
+        return $this->redirect('/admin/malicious-domains?success=' . urlencode('Domain added successfully'));
+    }
+
+    /**
+     * Delete a malicious domain
+     */
+    public function deleteMaliciousDomain(): Response
+    {
+        if ($redirect = $this->requireAdmin()) {
+            return $redirect;
+        }
+
+        $id = InputSanitizer::positiveInt($this->getPost('id'), 0);
+
+        if ($id === 0) {
+            if ($this->isAjax()) {
+                return $this->json(['error' => 'Invalid domain ID'], 400);
+            }
+            return $this->redirect('/admin/malicious-domains');
+        }
+
+        $maliciousDomainModel = new MaliciousDomain($this->app->getDatabase());
+        $maliciousDomainModel->delete($id);
+
+        if ($this->isAjax()) {
+            return $this->json(['success' => true, 'message' => 'Domain deleted successfully']);
+        }
+
+        return $this->redirect('/admin/malicious-domains');
+    }
+
+    /**
+     * Add malicious domain from scan results (AJAX endpoint)
+     */
+    public function addMaliciousDomainFromScan(): Response
+    {
+        if ($redirect = $this->requireAdmin()) {
+            return $redirect;
+        }
+
+        $domain = InputSanitizer::string($this->getPost('domain', ''));
+
+        if (empty($domain) || trim($domain) === '') {
+            return $this->json(['error' => 'Domain is required'], 400);
+        }
+
+        $maliciousDomainModel = new MaliciousDomain($this->app->getDatabase());
+
+        if ($maliciousDomainModel->exists($domain)) {
+            return $this->json(['error' => 'Domain already in malicious list'], 400);
+        }
+
+        try {
+            $maliciousDomainModel->create($domain, $this->getUserId(), 'Added from scan results');
+        } catch (\Exception $e) {
+            return $this->json(['error' => 'Failed to add domain: ' . $e->getMessage()], 500);
+        }
+
+        return $this->json([
+            'success' => true,
+            'message' => 'Domain added to malicious list successfully'
+        ]);
+    }
+
+    /**
+     * Export malicious domains as CSV
+     */
+    public function exportMaliciousDomains(): Response
+    {
+        if ($redirect = $this->requireAdmin()) {
+            return $redirect;
+        }
+
+        $maliciousDomainModel = new MaliciousDomain($this->app->getDatabase());
+        $domains = $maliciousDomainModel->getAll();
+
+        $output = fopen('php://temp', 'r+');
+
+        fputcsv($output, ['domain', 'notes']);
+
+        foreach ($domains as $domain) {
+            fputcsv($output, [
+                $domain['domain'],
+                $domain['notes'] ?? '',
+            ]);
+        }
+
+        rewind($output);
+        $csv = stream_get_contents($output);
+        fclose($output);
+
+        $filename = 'malicious-domains-' . date('Y-m-d-His') . '.csv';
+
+        return new Response($csv, 200, [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Content-Length' => strlen($csv),
+        ]);
+    }
+
+    /**
+     * Import malicious domains from CSV
+     */
+    public function importMaliciousDomains(): Response
+    {
+        if ($redirect = $this->requireAdmin()) {
+            return $redirect;
+        }
+
+        if (!isset($_FILES['csv_file']) || $_FILES['csv_file']['error'] !== UPLOAD_ERR_OK) {
+            return $this->redirect('/admin/malicious-domains?error=' . urlencode('No file uploaded or upload error'));
+        }
+
+        $file = $_FILES['csv_file'];
+
+        $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+        if ($ext !== 'csv') {
+            return $this->redirect('/admin/malicious-domains?error=' . urlencode('File must be a CSV'));
+        }
+
+        $handle = fopen($file['tmp_name'], 'r');
+        if (!$handle) {
+            return $this->redirect('/admin/malicious-domains?error=' . urlencode('Could not read CSV file'));
+        }
+
+        $maliciousDomainModel = new MaliciousDomain($this->app->getDatabase());
+        $stats = [
+            'total' => 0,
+            'added' => 0,
+            'skipped' => 0,
+            'invalid' => 0,
+        ];
+
+        // Skip header row
+        $header = fgetcsv($handle);
+
+        while (($row = fgetcsv($handle)) !== false) {
+            $stats['total']++;
+
+            if (empty($row[0]) || trim($row[0]) === '') {
+                continue;
+            }
+
+            $domain = trim($row[0]);
+            $notes = trim($row[1] ?? '');
+
+            if (!$this->isValidDomain($domain)) {
+                $stats['invalid']++;
+                continue;
+            }
+
+            if ($maliciousDomainModel->exists($domain)) {
+                $stats['skipped']++;
+                continue;
+            }
+
+            try {
+                $maliciousDomainModel->create($domain, $this->getUserId(), $notes ?: null);
+                $stats['added']++;
+            } catch (\Exception $e) {
+                error_log("[MaliciousDomain Import] Failed to import domain '{$domain}': " . $e->getMessage());
+                $stats['invalid']++;
+            }
+        }
+
+        fclose($handle);
+
+        $message = "Import complete: {$stats['added']} added";
+        if ($stats['skipped'] > 0) {
+            $message .= ", {$stats['skipped']} skipped (duplicates)";
+        }
+        if ($stats['invalid'] > 0) {
+            $message .= ", {$stats['invalid']} invalid";
+        }
+
+        return $this->redirect('/admin/malicious-domains?success=' . urlencode($message));
     }
 
     /**

@@ -937,6 +937,84 @@ async function addDomainToSafeList(button) {
 }
 
 /**
+ * Add a domain to the malicious domains list from scan results
+ */
+async function addDomainToMaliciousList(button) {
+    const fullDomain = button.dataset.domain;
+
+    if (!fullDomain) {
+        showNotification('Invalid domain', 'error');
+        return;
+    }
+
+    const baseDomain = extractBaseDomain(fullDomain);
+
+    if (!confirm(`Add "${baseDomain}" to the malicious domains list?\n\nFuture scans containing this domain will be flagged as confirmed phish with maximum risk score.`)) {
+        return;
+    }
+
+    const domain = baseDomain;
+
+    const originalText = button.textContent;
+    button.disabled = true;
+    button.textContent = 'Adding...';
+
+    try {
+        const csrfTokenMeta = document.querySelector('meta[name="csrf-token"]');
+        const csrfToken = csrfTokenMeta?.content || '';
+
+        if (!csrfToken) {
+            throw new Error('CSRF token not found. Please refresh the page.');
+        }
+
+        const formData = new URLSearchParams();
+        formData.append('domain', domain);
+        formData.append('_csrf_token', csrfToken);
+
+        const response = await fetch('/admin/malicious-domains/add-from-scan', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: formData
+        });
+
+        let data;
+        const contentType = response.headers.get('content-type');
+
+        if (contentType && contentType.includes('application/json')) {
+            data = await response.json();
+        } else {
+            if (response.status === 404) {
+                throw new Error('Endpoint not found. Please refresh the page.');
+            } else if (response.status === 500) {
+                throw new Error('Server error occurred. Check console for details.');
+            } else {
+                throw new Error('Server returned invalid response. Please refresh the page and try again.');
+            }
+        }
+
+        if (!response.ok) {
+            throw new Error(data.error || 'Failed to add domain to malicious list');
+        }
+
+        button.textContent = 'Malicious';
+        button.classList.add('btn-malicious-added');
+        button.disabled = true;
+
+        showNotification(`Domain "${domain}" added to malicious list successfully`, 'success');
+
+    } catch (error) {
+        console.error('[Malicious Domain] Exception:', error);
+        showNotification('Error: ' + error.message, 'error');
+
+        button.disabled = false;
+        button.textContent = originalText;
+    }
+}
+
+/**
  * Initialize auto-dismiss functionality for alerts
  */
 function initAutoDismissAlerts() {

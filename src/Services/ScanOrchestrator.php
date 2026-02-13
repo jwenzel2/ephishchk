@@ -10,6 +10,7 @@ use Ephishchk\Models\Scan;
 use Ephishchk\Models\ScanResult;
 use Ephishchk\Models\Setting;
 use Ephishchk\Models\SafeDomain;
+use Ephishchk\Models\MaliciousDomain;
 use Ephishchk\Services\Authentication\DnsLookupService;
 use Ephishchk\Services\Authentication\SpfCheckerService;
 use Ephishchk\Services\Authentication\DkimCheckerService;
@@ -35,6 +36,7 @@ class ScanOrchestrator
     private ScanResult $resultModel;
     private Setting $settingModel;
     private SafeDomain $safeDomainModel;
+    private MaliciousDomain $maliciousDomainModel;
 
     // Services
     private DnsLookupService $dns;
@@ -67,6 +69,7 @@ class ScanOrchestrator
             $this->resultModel = new ScanResult($db);
             $this->settingModel = new Setting($db, $config['encryption_key'] ?? '');
             $this->safeDomainModel = new SafeDomain($db);
+            $this->maliciousDomainModel = new MaliciousDomain($db);
 
             $this->logger->debug('Models initialized');
 
@@ -344,6 +347,11 @@ class ScanOrchestrator
             $this->headerAnalyzer->setSafeDomains($safeDomains);
             $this->logger->debug('Safe domains loaded for header analysis', ['count' => count($safeDomains)]);
 
+            // Load malicious domains for confirmed phish detection
+            $maliciousDomains = $this->maliciousDomainModel->getAllDomainStrings();
+            $this->headerAnalyzer->setMaliciousDomains($maliciousDomains);
+            $this->logger->debug('Malicious domains loaded for header analysis', ['count' => count($maliciousDomains)]);
+
             $result = $this->headerAnalyzer->analyze($email);
 
             $status = 'pass';
@@ -542,6 +550,11 @@ class ScanOrchestrator
             $safeDomains = $this->safeDomainModel->getAllDomainStrings();
             $this->linkAnalyzer->setSafeDomains($safeDomains);
             $this->logger->debug('Safe domains loaded', ['count' => count($safeDomains)]);
+
+            // Load malicious domains for confirmed phish detection
+            $maliciousDomains = $this->maliciousDomainModel->getAllDomainStrings();
+            $this->linkAnalyzer->setMaliciousDomains($maliciousDomains);
+            $this->logger->debug('Malicious domains loaded for link analysis', ['count' => count($maliciousDomains)]);
 
             $analyzed = $this->linkAnalyzer->analyzeMultiple($links);
 
@@ -798,6 +811,21 @@ class ScanOrchestrator
 
         if (empty($results)) {
             return 50; // Unknown
+        }
+
+        // Check for malicious domain matches - override to maximum risk
+        foreach ($results as $result) {
+            if (!empty($result['details']['findings'])) {
+                foreach ($result['details']['findings'] as $finding) {
+                    if (($finding['type'] ?? '') === 'malicious_domain_match') {
+                        $this->logger->info('Malicious domain match found - confirmed phish', [
+                            'scan_id' => $scanId,
+                            'matched_domain' => $finding['matched_malicious_domain'] ?? 'unknown',
+                        ]);
+                        return 100;
+                    }
+                }
+            }
         }
 
         // Track authentication check statuses

@@ -14,6 +14,7 @@ class LinkAnalyzerService
     private DnsLookupService $dns;
     private TyposquattingDetectionService $typosquattingDetector;
     private array $safeDomains = [];
+    private array $maliciousDomains = [];
 
     // Known URL shortener domains
     private const URL_SHORTENERS = [
@@ -51,6 +52,14 @@ class LinkAnalyzerService
     public function setSafeDomains(array $domains): void
     {
         $this->safeDomains = $domains;
+    }
+
+    /**
+     * Set malicious domains for confirmed phish detection
+     */
+    public function setMaliciousDomains(array $domains): void
+    {
+        $this->maliciousDomains = $domains;
     }
 
     /**
@@ -127,6 +136,28 @@ class LinkAnalyzerService
             }
         }
 
+        // Check against known malicious domains
+        if (!empty($this->maliciousDomains)) {
+            $matchedMalicious = $this->isDomainMalicious($domain);
+            if ($matchedMalicious !== null) {
+                $findings[] = [
+                    'type' => 'malicious_domain_match',
+                    'severity' => 'critical',
+                    'message' => "URL domain matches known malicious domain: {$matchedMalicious}",
+                    'details' => "Domain '{$domain}' matches malicious domain '{$matchedMalicious}' - Confirmed Phish",
+                    'matched_malicious_domain' => $matchedMalicious,
+                ];
+                $score = 100;
+                return [
+                    'url' => $url,
+                    'domain' => $domain,
+                    'score' => $score,
+                    'findings' => $findings,
+                    'risk_level' => 'critical',
+                ];
+            }
+        }
+
         // Check for excessive subdomains
         $subdomainCount = substr_count($domain, '.') - 1;
         if ($subdomainCount > 3) {
@@ -199,6 +230,22 @@ class LinkAnalyzerService
         }
 
         return $results;
+    }
+
+    /**
+     * Check if a domain matches any malicious domain (exact or subdomain match)
+     * Returns the matched malicious domain or null
+     */
+    private function isDomainMalicious(string $domain): ?string
+    {
+        $domain = strtolower($domain);
+        foreach ($this->maliciousDomains as $malicious) {
+            $malicious = strtolower($malicious);
+            if ($domain === $malicious || str_ends_with($domain, '.' . $malicious)) {
+                return $malicious;
+            }
+        }
+        return null;
     }
 
     /**

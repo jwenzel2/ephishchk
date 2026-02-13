@@ -77,15 +77,59 @@ if (($scan['risk_score'] ?? 0) >= 50) {
     </div>
 
     <?php
+    // Check for malicious domain matches (confirmed phish)
+    $maliciousDomainFindings = [];
+    foreach ($resultsByType as $type => $result) {
+        if (!empty($result['details']['findings'])) {
+            foreach ($result['details']['findings'] as $finding) {
+                if (($finding['type'] ?? '') === 'malicious_domain_match') {
+                    $maliciousDomainFindings[] = $finding;
+                }
+            }
+        }
+    }
+    // Also check links for malicious domain matches
+    if (!empty($resultsByType['links']['details']['links'])) {
+        foreach ($resultsByType['links']['details']['links'] as $link) {
+            if (!empty($link['findings'])) {
+                foreach ($link['findings'] as $finding) {
+                    if (($finding['type'] ?? '') === 'malicious_domain_match') {
+                        $maliciousDomainFindings[] = $finding;
+                    }
+                }
+            }
+        }
+    }
+    if (!empty($maliciousDomainFindings)):
+    ?>
+    <div class="card" style="border-left: 4px solid var(--color-error, #dc3545); background: rgba(220, 53, 69, 0.08);">
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+            <span style="font-size: 1.5em;">&#9888;</span>
+            <h2 style="margin: 0; color: var(--color-error, #dc3545);">Confirmed Phish</h2>
+        </div>
+        <p style="margin: 0 0 8px 0;">This email contains domains that match known malicious domains:</p>
+        <ul style="margin: 0; padding-left: 20px;">
+            <?php foreach ($maliciousDomainFindings as $mf): ?>
+            <li><strong><?= $e($mf['matched_malicious_domain'] ?? '') ?></strong> &mdash; <?= $e($mf['message'] ?? '') ?></li>
+            <?php endforeach; ?>
+        </ul>
+    </div>
+    <?php endif; ?>
+
+    <?php
     // Extract headers from header analysis result
     $extractedHeaders = $resultsByType['header']['details']['extracted_headers'] ?? [];
 
     // Extract typosquatting findings from header analysis
     $headerTyposquattingFindings = [];
+    $headerMaliciousFindings = [];
     if (isset($resultsByType['header']['details']['findings'])) {
         foreach ($resultsByType['header']['details']['findings'] as $finding) {
             if (isset($finding['header_field']) && $finding['type'] === 'typosquatting_safe_domain') {
                 $headerTyposquattingFindings[$finding['header_field']] = $finding;
+            }
+            if (isset($finding['header_field']) && $finding['type'] === 'malicious_domain_match') {
+                $headerMaliciousFindings[$finding['header_field']] = $finding;
             }
         }
     }
@@ -186,6 +230,18 @@ if (($scan['risk_score'] ?? 0) >= 50) {
                                 <?php if (!empty($finding['details'])): ?>
                                     <br><small class="alert-details"><?= $e($finding['details']) ?></small>
                                 <?php endif; ?>
+                            </span>
+                        </div>
+                    <?php endif; ?>
+                    <?php
+                    // Display malicious domain warning if detected for this header
+                    if (isset($headerMaliciousFindings[$headerKey])):
+                        $mFinding = $headerMaliciousFindings[$headerKey];
+                    ?>
+                        <div class="typosquat-alert" style="background: rgba(220, 53, 69, 0.1); border-color: var(--color-error, #dc3545);">
+                            <span class="alert-icon">&#9888;</span>
+                            <span class="alert-text" style="color: var(--color-error, #dc3545);">
+                                <strong>Malicious domain:</strong> matches known threat <strong><?= $e($mFinding['matched_malicious_domain'] ?? '') ?></strong>
                             </span>
                         </div>
                     <?php endif; ?>
@@ -344,6 +400,13 @@ if (($scan['risk_score'] ?? 0) >= 50) {
                                     data-domain="<?= $e($link['domain'] ?? parse_url($link['url'], PHP_URL_HOST) ?? '') ?>"
                                     onclick="addDomainToSafeList(this)">
                                 + Safe
+                            </button>
+                            <button class="btn btn-sm btn-danger"
+                                    data-url="<?= $e($link['url']) ?>"
+                                    data-domain="<?= $e($link['domain'] ?? parse_url($link['url'], PHP_URL_HOST) ?? '') ?>"
+                                    onclick="addDomainToMaliciousList(this)"
+                                    style="margin-left: 4px;">
+                                + Malicious
                             </button>
                         </td>
                         <?php endif; ?>

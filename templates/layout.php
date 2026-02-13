@@ -35,6 +35,7 @@ if ($theme === 'dark') {
                 <li><a href="/settings" class="<?= str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/settings') ? 'active' : '' ?>">Settings</a></li>
                 <li><a href="/admin/users" class="<?= str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/admin/users') ? 'active' : '' ?>">Users</a></li>
                 <li><a href="/admin/safe-domains" class="<?= str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/admin/safe-domains') ? 'active' : '' ?>">Safe Domains</a></li>
+                <li><a href="/admin/malicious-domains" class="<?= str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/admin/malicious-domains') ? 'active' : '' ?>">Malicious Domains</a></li>
                 <?php endif; ?>
                 <?php endif; ?>
             </ul>
