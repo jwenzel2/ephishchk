@@ -12,6 +12,30 @@ use Ephishchk\Core\Database;
  */
 class SafeDomain
 {
+    private const KNOWN_MULTI_PART_PUBLIC_SUFFIXES = [
+        'co.uk',
+        'com.au',
+        'co.nz',
+        'co.za',
+        'com.br',
+        'co.jp',
+        'edu.sv',
+    ];
+
+    private const COMMON_CC_SLD_LABELS = [
+        'ac',
+        'co',
+        'com',
+        'edu',
+        'gov',
+        'gob',
+        'go',
+        'net',
+        'org',
+        'mil',
+        'nom',
+    ];
+
     private Database $db;
 
     public function __construct(Database $db)
@@ -206,12 +230,18 @@ class SafeDomain
         $normalized = $this->normalizeDomain($domain);
         $parts = explode('.', $normalized);
 
-        // Handle cases like 'google.co.uk' by taking second-to-last part
-        if (count($parts) >= 2) {
-            return $parts[count($parts) - 2];
+        if (count($parts) < 2) {
+            return $normalized;
         }
 
-        return $normalized;
+        $isMultiPartPublicSuffix = $this->hasMultiPartPublicSuffix($parts);
+        $sldIndex = $isMultiPartPublicSuffix ? count($parts) - 3 : count($parts) - 2;
+
+        if ($sldIndex < 0) {
+            return $normalized;
+        }
+
+        return $parts[$sldIndex];
     }
 
     /**
@@ -226,25 +256,37 @@ class SafeDomain
         $normalized = $this->normalizeDomain($domain);
         $parts = explode('.', $normalized);
 
-        // List of known two-part TLDs (not comprehensive, but covers common cases)
-        $twoPartTlds = ['co.uk', 'com.au', 'co.nz', 'co.za', 'com.br', 'co.jp'];
-
         // If only 2 parts (e.g., 'google.com'), return as-is
         if (count($parts) <= 2) {
             return $normalized;
         }
 
-        // Check if it uses a two-part TLD
-        $lastTwoParts = $parts[count($parts) - 2] . '.' . $parts[count($parts) - 1];
-        if (in_array($lastTwoParts, $twoPartTlds)) {
-            // Take last 3 parts (subdomain.example.co.uk -> example.co.uk)
-            if (count($parts) >= 3) {
-                return $parts[count($parts) - 3] . '.' . $parts[count($parts) - 2] . '.' . $parts[count($parts) - 1];
-            }
+        $labelsToKeep = $this->hasMultiPartPublicSuffix($parts) ? 3 : 2;
+        return implode('.', array_slice($parts, -$labelsToKeep));
+    }
+
+    /**
+     * Check if domain ends in a multi-part public suffix (e.g., edu.sv, co.uk)
+     *
+     * @param array<int, string> $parts
+     */
+    private function hasMultiPartPublicSuffix(array $parts): bool
+    {
+        if (count($parts) < 2) {
+            return false;
         }
 
-        // Default: take last 2 parts (go.cloudplatformonline.com -> cloudplatformonline.com)
-        return $parts[count($parts) - 2] . '.' . $parts[count($parts) - 1];
+        $secondLevel = $parts[count($parts) - 2];
+        $tld = $parts[count($parts) - 1];
+        $lastTwoParts = $secondLevel . '.' . $tld;
+
+        if (in_array($lastTwoParts, self::KNOWN_MULTI_PART_PUBLIC_SUFFIXES, true)) {
+            return true;
+        }
+
+        return strlen($tld) === 2
+            && ctype_alpha($tld)
+            && in_array($secondLevel, self::COMMON_CC_SLD_LABELS, true);
     }
 
     /**

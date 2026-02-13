@@ -800,32 +800,72 @@ function applyAutoTheme() {
 }
 
 /**
+ * Known multi-part public suffixes that require preserving 3 labels
+ * Example: liceosalvadoreno.edu.sv -> keep liceosalvadoreno.edu.sv
+ */
+const KNOWN_MULTI_PART_PUBLIC_SUFFIXES = new Set([
+    'co.uk',
+    'com.au',
+    'co.nz',
+    'co.za',
+    'com.br',
+    'co.jp',
+    'edu.sv'
+]);
+
+/**
+ * Common second-level labels used under country-code TLDs
+ */
+const COMMON_CC_SLD_LABELS = new Set([
+    'ac',
+    'co',
+    'com',
+    'edu',
+    'gov',
+    'gob',
+    'go',
+    'net',
+    'org',
+    'mil',
+    'nom'
+]);
+
+/**
+ * Determine whether the domain ends in a multi-part public suffix
+ */
+function hasMultiPartPublicSuffix(parts) {
+    if (parts.length < 2) {
+        return false;
+    }
+
+    const secondLevel = parts[parts.length - 2];
+    const tld = parts[parts.length - 1];
+    const lastTwoParts = secondLevel + '.' + tld;
+
+    if (KNOWN_MULTI_PART_PUBLIC_SUFFIXES.has(lastTwoParts)) {
+        return true;
+    }
+
+    return tld.length === 2 && /^[a-z]+$/.test(tld) && COMMON_CC_SLD_LABELS.has(secondLevel);
+}
+
+/**
  * Extract base domain from a domain with subdomains
  * Example: 'go.cloudplatformonline.com' -> 'cloudplatformonline.com'
  */
 function extractBaseDomain(domain) {
     if (!domain) return domain;
 
-    const parts = domain.toLowerCase().split('.');
+    const normalized = domain.toLowerCase().replace(/^\.+/, '').replace(/\.+$/, '');
+    const parts = normalized.split('.').filter(Boolean);
 
     // If only 2 parts, return as-is
     if (parts.length <= 2) {
-        return domain;
+        return parts.join('.');
     }
 
-    // Known two-part TLDs
-    const twoPartTlds = ['co.uk', 'com.au', 'co.nz', 'co.za', 'com.br', 'co.jp'];
-    const lastTwoParts = parts[parts.length - 2] + '.' + parts[parts.length - 1];
-
-    if (twoPartTlds.includes(lastTwoParts)) {
-        // Take last 3 parts for two-part TLDs
-        if (parts.length >= 3) {
-            return parts.slice(-3).join('.');
-        }
-    }
-
-    // Default: take last 2 parts
-    return parts.slice(-2).join('.');
+    const labelsToKeep = hasMultiPartPublicSuffix(parts) ? 3 : 2;
+    return parts.slice(-labelsToKeep).join('.');
 }
 
 /**

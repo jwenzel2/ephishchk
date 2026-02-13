@@ -14,6 +14,30 @@ namespace Ephishchk\Services\Scanner;
  */
 class TyposquattingDetectionService
 {
+    private const KNOWN_MULTI_PART_PUBLIC_SUFFIXES = [
+        'co.uk',
+        'com.au',
+        'co.nz',
+        'co.za',
+        'com.br',
+        'co.jp',
+        'edu.sv',
+    ];
+
+    private const COMMON_CC_SLD_LABELS = [
+        'ac',
+        'co',
+        'com',
+        'edu',
+        'gov',
+        'gob',
+        'go',
+        'net',
+        'org',
+        'mil',
+        'nom',
+    ];
+
     /**
      * Check a domain against a list of safe domains for typosquatting attempts
      *
@@ -119,12 +143,42 @@ class TyposquattingDetectionService
     {
         $parts = explode('.', $domain);
 
-        // Handle cases like 'google.co.uk' by taking second-to-last part
-        if (count($parts) >= 2) {
-            return $parts[count($parts) - 2];
+        if (count($parts) < 2) {
+            return $domain;
         }
 
-        return $domain;
+        $isMultiPartPublicSuffix = $this->hasMultiPartPublicSuffix($parts);
+        $sldIndex = $isMultiPartPublicSuffix ? count($parts) - 3 : count($parts) - 2;
+
+        if ($sldIndex < 0) {
+            return $domain;
+        }
+
+        return $parts[$sldIndex];
+    }
+
+    /**
+     * Check if domain ends in a multi-part public suffix (e.g., edu.sv, co.uk)
+     *
+     * @param array<int, string> $parts
+     */
+    private function hasMultiPartPublicSuffix(array $parts): bool
+    {
+        if (count($parts) < 2) {
+            return false;
+        }
+
+        $secondLevel = $parts[count($parts) - 2];
+        $tld = $parts[count($parts) - 1];
+        $lastTwoParts = $secondLevel . '.' . $tld;
+
+        if (in_array($lastTwoParts, self::KNOWN_MULTI_PART_PUBLIC_SUFFIXES, true)) {
+            return true;
+        }
+
+        return strlen($tld) === 2
+            && ctype_alpha($tld)
+            && in_array($secondLevel, self::COMMON_CC_SLD_LABELS, true);
     }
 
     /**
